@@ -34,31 +34,44 @@ extension Carpaccio.Collection: ImageCollection
     }
 }
 
-public typealias ImageCollectionHandler = (Collection) -> Void
-public typealias ImageCollectionErrorHandler = (Error) -> Void
+public typealias CollectionImageBatchHandler = (_ preparedBatchOfImages: [Image]) -> Void
+public typealias CollectionCompletionHandler = (_ completedCollection: Collection) -> Void
+public typealias CollectionErrorHandler = (_ error: Error) -> Void
 
 open class Collection
 {
-    public let name:String
-    public var images:AnyCollection<Image>
-    public let imageCount:Int
+    public var images: AnyCollection<Image>
+    public let name: String
+
+    public var imageCount: Int {
+        return Int(self.images.count)
+    }
+    
+    public let sortingScheme: SortingScheme
     public let URL: Foundation.URL?
     
-    public required init(name: String, images: AnyCollection<Image>, imageCount:Int, URL: Foundation.URL) throws
+    public init(url: URL, sortingScheme: SortingScheme) {
+        self.URL = url
+        self.name = url.lastPathComponent
+        self.sortingScheme = sortingScheme
+        self.images = AnyCollection<Image>([Image]())
+    }
+    
+    public required init(name: String, images: AnyCollection<Image>, imageCount: Int, URL: Foundation.URL) throws
     {
         self.URL = URL
         self.name = name
         self.images = images
-        self.imageCount = imageCount
+        self.sortingScheme = .none
     }
     
     public init(contentsOfURL URL: Foundation.URL) throws {
         self.URL = URL
         self.name = URL.lastPathComponent
         
-        let (images, count) = try Collection.load(contentsOfURL: URL)
+        let (images, _) = try Collection.load(contentsOfURL: URL)
         self.images = AnyCollection<Image>(images)
-        self.imageCount = count
+        self.sortingScheme = .none
     }
     
     public enum SortingScheme {
@@ -95,8 +108,8 @@ open class Collection
                               queue: DispatchQueue = DispatchQueue.global(),
                               sortingScheme: SortingScheme = .none,
                               maxMetadataLoadParallelism: Int? = nil,
-                              completionHandler: @escaping ImageCollectionHandler,
-                              errorHandler: @escaping ImageCollectionErrorHandler) {
+                              completionHandler: @escaping CollectionCompletionHandler,
+                              errorHandler: @escaping CollectionErrorHandler) {
         queue.async {
             do {
                 let imageURLs = try self.imageURLs(atCollectionURL: collectionURL)
@@ -116,7 +129,7 @@ open class Collection
                 let returnedImages:AnyCollection<Image>
                 
                 switch sortingScheme {
-                    case .none:
+                case .none:
                     returnedImages = AnyCollection<Image>(images)
                     
                 case .byName:
@@ -137,6 +150,64 @@ open class Collection
         }
     }
     
+    // MARK: Batched image discovery
+    public func prepare(batchSize: Int = 50, maximumParallelism: Int = 1, batchHandler: @escaping CollectionImageBatchHandler, completionHandler: @escaping CollectionCompletionHandler,  errorHandler: @escaping CollectionErrorHandler) {
+        guard let url = self.URL else {
+            return
+        }
+        
+        do {
+            let urls = try Collection.imageURLs(atCollectionURL: url)
+            print("Will prepare \(urls.count) source images at \(url.path)")
+            prepareNextBatch(ofImageURLs: urls, startingAt: 0, batchSize: batchSize, maximumParallelism: maximumParallelism, batchHandler: batchHandler, completionHandler: completionHandler)
+        } catch {
+            errorHandler(error)
+        }
+    }
+    
+    private lazy var prepareOperationQueue: OperationQueue = {
+        let opq = OperationQueue()
+        opq.maxConcurrentOperationCount = 1
+        return opq
+    }()
+    
+    private func prepareNextBatch(ofImageURLs urls: [URL], startingAt firstIndex: Int, batchSize n: Int, maximumParallelism: Int, batchHandler: @escaping CollectionImageBatchHandler, completionHandler: @escaping CollectionCompletionHandler) {
+        let lastIndex = min(firstIndex + n - 1, urls.count - 1)
+        
+        guard firstIndex < urls.endIndex, lastIndex >= firstIndex else {
+            completionHandler(self)
+            return
+        }
+        
+        weak var weakCollection = self
+        
+        prepareOperationQueue.addOperation {
+            guard let collection = weakCollection else {
+                return
+            }
+            
+            print("Will prepare next batch of max \(n) images (out of \(urls.count)), \(firstIndex) ... \(lastIndex)")
+            
+            let preparedBatchOfImages = Array(urls[firstIndex ... lastIndex]).lazy.parallelFlatMap(maxParallelism: maximumParallelism) { url -> Image? in
+                do {
+                    let image = try Image(URL: url)
+                    image.fetchMetadata()
+                    return image
+                }
+                catch {
+                    print("ERROR! Failed to initialise image at '\(url.path)'")
+                    return nil
+                }
+            }
+            
+            collection.images = AnyCollection<Image>([collection.images, AnyCollection<Image>(preparedBatchOfImages)].joined())
+            batchHandler(preparedBatchOfImages)
+
+            collection.prepareNextBatch(ofImageURLs: urls, startingAt: firstIndex + n, batchSize: n, maximumParallelism: maximumParallelism, batchHandler: batchHandler, completionHandler: completionHandler)
+        }
+    }
+    
+    // MARK: Image loading
     public typealias ImageLoadHandler = (_ index:Int, _ total:Int, _ image:Image) -> Void
     public typealias ImageLoadErrorHandler = (Error) -> Void
     
