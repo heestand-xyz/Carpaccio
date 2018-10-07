@@ -47,7 +47,7 @@ struct BitmapImageUtility {
         
         return UIImage(cgImage: cgImage,
                        scale: size.width / CGFloat(cgImage.width),
-                       orientation: UIImageOrientation.up)
+                       orientation: UIImage.Orientation.up)
     }
     
     static func image(ciImage image: CIImage) -> BitmapImage? {
