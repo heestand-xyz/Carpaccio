@@ -16,6 +16,9 @@ build_ios:
   stage: build_ios
   script:
    - xcodebuild -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 6,OS=10.3' -workspace Carpaccio.xcworkspace -scheme Carpaccio-iOS clean build | xcpretty
+  tags:
+    - xcode
+    - macos
 
 test_macos:
   stage: test_macos
