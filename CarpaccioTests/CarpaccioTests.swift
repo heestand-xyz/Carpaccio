@@ -28,9 +28,9 @@ class CarpaccioTests: XCTestCase {
         
         try! FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true, attributes: [:])
         
-        let converter = ImageLoader(imageURL: img1URL, thumbnailScheme: .fullImageWhenThumbnailMissing)
+        let converter = ImageLoader(imageURL: img1URL, thumbnailScheme: .fullImageWhenThumbnailMissing, colorSpace: nil)
         
-        let (thumb, imageMetadata) = try! converter.loadThumbnailImage()
+        let (thumb, imageMetadata) = try! converter.loadThumbnailImage(maximumPixelDimensions: nil, allowCropping: true, cancelled: nil)
         
         XCTAssertEqual(thumb.size.width, 1616)
         XCTAssertEqual(thumb.size.height, 1080)
@@ -63,7 +63,7 @@ class CarpaccioTests: XCTestCase {
 		
 		try! FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true, attributes: [:])
 		
-		let converter = ImageLoader(imageURL: img1URL, thumbnailScheme: .fullImageWhenThumbnailMissing)
+        let converter = ImageLoader(imageURL: img1URL, thumbnailScheme: .fullImageWhenThumbnailMissing, colorSpace: nil)
 		
 		let (image, imageMetadata) = try! converter.loadFullSizeImage()
         
@@ -146,7 +146,7 @@ class CarpaccioTests: XCTestCase {
             return
         }
         
-        let loader = ImageLoader(imageURL: url, thumbnailScheme: .fullImageWhenThumbnailMissing)
+        let loader = ImageLoader(imageURL: url, thumbnailScheme: .fullImageWhenThumbnailMissing, colorSpace: nil)
         
         XCTAssertThrowsError(try loader.loadImageMetadataIfNeeded())
         XCTAssertThrowsError(try loader.loadImageMetadataIfNeeded(forceReload: true))
@@ -159,7 +159,7 @@ class CarpaccioTests: XCTestCase {
             return
         }
         
-        let loader = ImageLoader(imageURL: url, thumbnailScheme: .fullImageWhenThumbnailMissing)
-        XCTAssertThrowsError(try loader.loadThumbnailImage())
+        let loader = ImageLoader(imageURL: url, thumbnailScheme: .fullImageWhenThumbnailMissing, colorSpace: nil)
+        XCTAssertThrowsError(try loader.loadThumbnailImage(maximumPixelDimensions: nil, allowCropping: true, cancelled: nil))
     }
 }
