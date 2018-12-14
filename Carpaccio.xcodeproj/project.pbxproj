@@ -43,6 +43,7 @@
 		5F1E22A01CDEAC330083FD6F /* DSC00583.ARW in Resources */ = {isa = PBXBuildFile; fileRef = 5F1E229D1CDEAC330083FD6F /* DSC00583.ARW */; };
 		5F1E22A11CDEAC330083FD6F /* DSC00588.ARW in Resources */ = {isa = PBXBuildFile; fileRef = 5F1E229E1CDEAC330083FD6F /* DSC00588.ARW */; };
 		5F1E22A21CDEAC330083FD6F /* DSC00593.ARW in Resources */ = {isa = PBXBuildFile; fileRef = 5F1E229F1CDEAC330083FD6F /* DSC00593.ARW */; };
+		5F52830C21C3E2D6009F77F6 /* CGRect+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F52830B21C3E2D6009F77F6 /* CGRect+Extensions.swift */; };
 		5FAD66691D72FD3C006973C9 /* Collection+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FAD66681D72FD3C006973C9 /* Collection+Extensions.swift */; };
 		5FB593031D7B4DE300FB0086 /* Carpaccio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5F020A151D7B334A004C1DE6 /* Carpaccio.framework */; };
 		5FB593091D7B4DE800FB0086 /* CarpaccioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F1E228C1CDEA9D90083FD6F /* CarpaccioTests.swift */; };
@@ -110,6 +111,7 @@
 		5F1E229D1CDEAC330083FD6F /* DSC00583.ARW */ = {isa = PBXFileReference; lastKnownFileType = file; path = DSC00583.ARW; sourceTree = "<group>"; };
 		5F1E229E1CDEAC330083FD6F /* DSC00588.ARW */ = {isa = PBXFileReference; lastKnownFileType = file; path = DSC00588.ARW; sourceTree = "<group>"; };
 		5F1E229F1CDEAC330083FD6F /* DSC00593.ARW */ = {isa = PBXFileReference; lastKnownFileType = file; path = DSC00593.ARW; sourceTree = "<group>"; };
+		5F52830B21C3E2D6009F77F6 /* CGRect+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CGRect+Extensions.swift"; sourceTree = "<group>"; };
 		5FAD66681D72FD3C006973C9 /* Collection+Extensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "Collection+Extensions.swift"; sourceTree = "<group>"; };
 		5FB592FE1D7B4DE300FB0086 /* CarpaccioTests-iOS.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "CarpaccioTests-iOS.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5FB593021D7B4DE300FB0086 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = "CarpaccioTests-iOS/Info.plist"; sourceTree = SOURCE_ROOT; };
@@ -167,6 +169,7 @@
 				5F020A1D1D7B460C004C1DE6 /* BitmapImage.swift */,
 				5F020A181D7B3D08004C1DE6 /* BitmapImage+iOS.swift */,
 				5F020A1A1D7B3D16004C1DE6 /* BitmapImage+OSX.swift */,
+				5F52830B21C3E2D6009F77F6 /* CGRect+Extensions.swift */,
 			);
 			name = "Crossplatform Bitmap Image";
 			sourceTree = "<group>";
@@ -522,6 +525,7 @@
 				5FF2F7A91CE1563400C15E3A /* Image.swift in Sources */,
 				5FAD66691D72FD3C006973C9 /* Collection+Extensions.swift in Sources */,
 				5F020A1B1D7B3D16004C1DE6 /* BitmapImage+OSX.swift in Sources */,
+				5F52830C21C3E2D6009F77F6 /* CGRect+Extensions.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
