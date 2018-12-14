@@ -86,6 +86,9 @@ public struct ImageMetadata
     }
 
     public init(imageSource: ImageIO.CGImageSource) throws {
+        if (CGImageSourceGetCount(imageSource) == 0) {
+            throw Image.Error.sourceHasNoImages
+        }
         guard let imageProperties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) else {
             throw Image.Error.noMetadata
         }

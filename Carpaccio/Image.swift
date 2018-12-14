@@ -23,6 +23,7 @@ open class Image: Equatable, Hashable {
         case noThumbnail(Image)
         case noHistogram(Image)
         case noMetadata
+        case sourceHasNoImages
         case failedToDecodeImage
         case invalidImageSize
     }
