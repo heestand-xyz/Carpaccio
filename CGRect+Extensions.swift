@@ -8,8 +8,8 @@
 
 import Foundation
 
-extension Array where Iterator.Element == CGRect {
-    var union: CGRect {
+public extension Array where Iterator.Element == CGRect {
+    public var union: CGRect {
         if self.count == 0 {
             return CGRect.zero
         }
