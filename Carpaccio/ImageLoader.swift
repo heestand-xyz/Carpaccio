@@ -18,9 +18,34 @@ import ImageIO
  */
 public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol
 {
-    enum Error: Swift.Error {
+    enum Error: Swift.Error, LocalizedError {
         case filterInitializationFailed(URL: URL)
         case failedToOpenImage(message: String)
+
+        var errorDescription: String? {
+            switch self {
+            case .filterInitializationFailed(let URL):
+                return "Failed to initialize image loader filter for image at URL \(URL)"
+            case .failedToOpenImage(let msg):
+                return "Failed to open image: \(msg)"
+            }
+        }
+
+        var failureReason: String? {
+            switch self {
+            case .filterInitializationFailed(let URL):
+                return "Failed to initialize image loader filter for file at \"\(URL)\""
+            case .failedToOpenImage(let msg):
+                return msg
+            }
+        }
+
+        var helpAnchor: String? {
+            return "Ensure that images of the kind you are trying to load are supported by your system."
+        }
+        var recoverySuggestion: String? {
+            return self.helpAnchor
+        }
     }
     
     public enum ThumbnailScheme: Int {

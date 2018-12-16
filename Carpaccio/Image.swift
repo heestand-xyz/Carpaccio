@@ -9,10 +9,9 @@
 import Foundation
 import QuartzCore
 
-open class Image: Equatable, Hashable {
+open class Image: Equatable, Hashable, CustomStringConvertible {
     
-    public enum Error: Swift.Error {
-        case noURL
+    public enum Error: Swift.Error, LocalizedError {
         case noLoader(Image)
         case noFileExtension // FIXME: lift this restriction.
         case urlMissing
@@ -26,6 +25,37 @@ open class Image: Equatable, Hashable {
         case sourceHasNoImages
         case failedToDecodeImage
         case invalidImageSize
+        
+        public var errorDescription: String? {
+            switch self {
+            case .noLoader:
+                return "Operation failed because no loader is available for image"
+            case .noFileExtension:
+                return "Operation failed because image lacks a file extension"
+            case .urlMissing:
+                return "Operation failed because image has no URL"
+            case .alreadyPreparing:
+                return "Attempt to prepare image failed because image is already being prepared"
+            case .alreadyPrepared:
+                return "Operation failed because image has already been prepared"
+            case .locationNotEnumerable(let URL):
+                return "Operation failed because location at \(URL) is not possible to read from."
+            case .loadingFailed(let underlyingError):
+                return "Loading failed because of an underlying error: \(underlyingError)"
+            case .noThumbnail:
+                return "No thumbnail for image"
+            case .noHistogram(let img):
+                return "Operation failed because no histogram is available for image \(img)"
+            case .noMetadata:
+                return "Operation failed because there is no metadata for image"
+            case .sourceHasNoImages:
+                return "Operation failed because image has no sources for image data"
+            case .failedToDecodeImage:
+                return "Failed to decode image"
+            case .invalidImageSize:
+                return "Operation failed because an invalid or missing dimension was provided for its height of width"
+            }
+        }
     }
     
     public let name: String
@@ -160,7 +190,7 @@ open class Image: Equatable, Hashable {
             }
             
             guard let URL = self.URL else {
-                throw Error.noURL
+                throw Error.urlMissing
             }
             
             let loader = Image.defaultImageLoaderType.init(imageURL: URL, thumbnailScheme: .never, colorSpace: nil)
@@ -338,6 +368,10 @@ open class Image: Equatable, Hashable {
     
     public var hashValue: Int {
         return UUID.hashValue
+    }
+
+    public var description: String {
+        return "(name: \(self.name), URL: \(self.URL?.absoluteString ?? "(unknown)"), thumbnail loaded: \(self.thumbnailImage != nil), full image loaded: \(self.fullImage != nil))"
     }
 }
 

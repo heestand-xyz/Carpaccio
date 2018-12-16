@@ -13,7 +13,7 @@ public typealias ImageMetadataHandler = (_ metadata: ImageMetadata) -> Void
 
 public typealias PresentableImageHandler = (_ image: BitmapImage, _ metadata: ImageMetadata) -> Void
 
-public enum ImageLoadingError: Swift.Error
+public enum ImageLoadingError: Swift.Error, LocalizedError
 {
     case failedToExtractImageMetadata(URL: URL, message: String)
     case failedToLoadThumbnailImage(URL: URL, message: String)
@@ -26,6 +26,84 @@ public enum ImageLoadingError: Swift.Error
     case expectingMetadata(URL: URL, message: String)
     case failedToConvertColorSpace(url: URL, message: String)
     case cancelled(url: URL, message: String)
+
+    public var errorCode: Int {
+        switch self {
+        case .failedToExtractImageMetadata: return 1
+        case .failedToLoadThumbnailImage: return 2
+        case .failedToLoadFullSizeImage: return 3
+        case .noImageSource: return 4
+        case .failedToInitializeDecoder: return 5
+        case .failedToDecode: return 6
+        case .failedToLoadDecodedImage: return 7
+        case .loadingSetToNever: return 8
+        case .expectingMetadata: return 9
+        case .failedToConvertColorSpace: return 10
+        case .cancelled: return 11
+        }
+    }
+
+    public var errorDescription: String? {
+        switch self {
+        case .failedToExtractImageMetadata(let url, let msg):
+            return "Failed to extract image metadata for file at URL \(url): \(msg)"
+        case .failedToLoadThumbnailImage(let url, let msg):
+            return "Failed to load image thumbnail at URL \(url): \(msg)"
+        case .failedToLoadFullSizeImage(let url, let msg):
+            return "Failed to load full sized image from file at URL \(url): \(msg)"
+        case .noImageSource(let url, let msg):
+            return "No sources of image data present in file at URL \(url): \(msg)"
+        case .failedToInitializeDecoder(let url, let msg):
+            return "Failed to initialize decoder for image file at URL \(url): \(msg)"
+        case .failedToDecode(let url, let msg):
+            return "Failed to decode image from file at URL \(url): \(msg)"
+        case .failedToLoadDecodedImage(let url, let msg):
+            return "Failed to load decoded image from image file at URL \(url): \(msg)"
+        case .loadingSetToNever(let url, let msg):
+            return "Image at \(url) set to be never to be loaded: \(msg)"
+        case .expectingMetadata(let url, let msg):
+            return "Failing to receive expected metadata for file at URL \(url): \(msg)"
+        case .failedToConvertColorSpace(let url, let msg):
+            return "Failed to convert image color space for file at URL \(url): \(msg)"
+        case .cancelled(let url, let msg):
+            return "Operation for image at URL \(url) was cancelled: \(msg)"
+        }
+    }
+
+    public var failureReason: String? {
+        switch self {
+        case .failedToExtractImageMetadata(_, let msg):
+            return msg
+        case .failedToLoadThumbnailImage(_, let msg):
+            return msg
+        case .failedToLoadFullSizeImage(_, let msg):
+            return msg
+        case .noImageSource(_, let msg):
+            return msg
+        case .failedToInitializeDecoder(_, let msg):
+            return msg
+        case .failedToDecode(_, let msg):
+            return msg
+        case .failedToLoadDecodedImage(_, let msg):
+            return msg
+        case .loadingSetToNever(_, let msg):
+            return msg
+        case .expectingMetadata(_, let msg):
+            return msg
+        case .failedToConvertColorSpace(_, let msg):
+            return msg
+        case .cancelled(_, let msg):
+            return msg
+        }
+    }
+
+    public var recoverySuggestion: String? {
+        return "Please check that the file in question exists, is a valid image and that you have permissions to access it."
+    }
+
+    public var helpAnchor: String? {
+        return "Please check that the file in question exists, is a valid image that you have permissions to access it. For example, check that it opens in another image reading application."
+    }
 }
 
 public typealias ImageLoadingErrorHandler = (_ error: ImageLoadingError) -> Void
