@@ -367,14 +367,14 @@ fileprivate struct DateFormatterStylePair: Equatable, Hashable {
     let dateStyle: DateFormatter.Style
     let timeStyle: DateFormatter.Style
     
-    var hashValue: Int {
-        return dateStyle.hashValue ^ timeStyle.hashValue
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(dateStyle)
+        hasher.combine(timeStyle)
     }
     
     static fileprivate func == (lhs: DateFormatterStylePair, rhs: DateFormatterStylePair) -> Bool {
         return lhs.dateStyle == rhs.dateStyle && lhs.timeStyle == rhs.timeStyle
     }
-
 }
 
 
