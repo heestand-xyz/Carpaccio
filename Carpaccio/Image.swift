@@ -82,9 +82,7 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
         return nil
     }
     
-    public let UUID: String = {
-        return Foundation.UUID().uuidString
-    }()
+    public lazy var UUID: String = Foundation.UUID().uuidString
     
     public typealias MetadataHandler = (_ metadata: ImageMetadata) -> Void
     public typealias ErrorHandler = (_ error: Image.Error) -> Void
