@@ -364,8 +364,8 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
         return Set(["jpg", "jpeg", "png", "tiff", "tif", "gif"])
     }()
     
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(UUID)
+    public var hashValue: Int {
+        return UUID.hashValue
     }
 
     public var description: String {
