@@ -235,7 +235,7 @@ open class Collection
     /**
      Return images found in this collection whose URL is included in given input array or URLs.
      */
-    public func images(forURLs URLs: [Foundation.URL]) -> [Image]
+    open func images(forURLs URLs: [Foundation.URL]) -> [Image]
     {
         var images = [Image]()
         
