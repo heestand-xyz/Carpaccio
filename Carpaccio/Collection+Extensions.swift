@@ -24,7 +24,7 @@ extension Swift.Collection where Self.Index == Int {
         var result: [(Int, T?)] = []
         
         let group = DispatchGroup()
-        let lock = DispatchQueue(label: "pconcurrentmap")
+        let lock = DispatchQueue(label: "pcompactmap")
         var caughtError: Swift.Error? = nil
 
         DispatchQueue.concurrentPerform(iterations: self.count) { i in
@@ -70,7 +70,7 @@ extension Swift.Sequence {
         
         var result: [(Int64, T)] = []
         let group = DispatchGroup()
-        let lock = DispatchQueue(label: "pconcurrentmap")
+        let lock = DispatchQueue(label: "pcompactmap")
         
         let parallelism:Int = {
             if let maxParallelism = maxParallelism {
