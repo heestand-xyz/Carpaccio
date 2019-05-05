@@ -142,7 +142,7 @@ open class Collection
                 
                 let images: [Image]
                 do {
-                    images = try imageURLs.lazy.parallelFlatMap(maxParallelism:maxMetadataLoadParallelism) { URL -> Image? in
+                    images = try imageURLs.lazy.parallelCompactMap { URL -> Image? in
                         let image = try Image(URL: URL)
                         
                         do {

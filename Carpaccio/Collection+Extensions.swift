@@ -10,82 +10,38 @@ import Foundation
 
 // Inspired by http://moreindirection.blogspot.co.uk/2015/07/gcd-and-parallel-collections-in-swift.html
 extension Swift.Collection where Self.Index == Int {
-    public func parallelMap<T>(maxParallelism:Int? = nil,
-                            _ transform: @escaping ((Iterator.Element) throws -> T)) throws -> [T]
+    public func parallelMap<T>(_ transform: @escaping ((Iterator.Element) throws -> T)) throws -> [T]
     {
-        return try self.parallelFlatMap(maxParallelism: maxParallelism, transform)
+        return try self.parallelCompactMap(transform)
     }
     
-    public func parallelFlatMap<T>(maxParallelism:Int? = nil,
-                                _ transform: @escaping ((Iterator.Element) throws -> T?)) throws -> [T]
+    public func parallelCompactMap<T>(_ transform: @escaping ((Iterator.Element) throws -> T?)) throws -> [T]
     {
-        if let maxParallelism = maxParallelism, maxParallelism == 1 {
-            return try self.compactMap(transform)
-        }
-        
         guard !self.isEmpty else {
             return []
         }
         
-        var result: [(Int64, [T])] = []
+        var result: [(Int, T?)] = []
         
         let group = DispatchGroup()
-        
-        let lock = DispatchQueue(label: "pflatmap")
-        
-        let parallelism:Int = {
-            if let maxParallelism = maxParallelism {
-                precondition(maxParallelism > 0)
-                return maxParallelism
-            }
-            
-            return ProcessInfo.processInfo.activeProcessorCount
-        }()
-        
-        // step can never be 0
-        
-        let count = Int64(self.count)
-        let step = [1, count / Int64(parallelism)].max()!
-        
-        var stepIndex:Int64 = 0
+        let lock = DispatchQueue(label: "pconcurrentmap")
         var caughtError: Swift.Error? = nil
 
-        repeat {
-            var stepResult: [T] = []
-            
-            if let error = caughtError {
-                throw error
+        DispatchQueue.concurrentPerform(iterations: self.count) { i in
+            if caughtError != nil {
+                return
             }
             
-            DispatchQueue.global().async(group: group) { [capturedStepIndex = stepIndex] in
-                if caughtError != nil {
-                    return
-                }
-                
-                for i in (capturedStepIndex * step) ..< ((capturedStepIndex + 1) * step) {
-                    if caughtError != nil {
-                        return
-                    }
-               
-                    if i < count {
-                        do {
-                            if let mappedElement = try transform(self[Int(i)]) {
-                                stepResult += [mappedElement]
-                            }
-                        }
-                        catch {
-                            caughtError = error
-                        }
-                    }
-                }
-                
+            do {
+                let t = try transform(self[i])
                 lock.async(group: group) {
-                    result += [(capturedStepIndex, stepResult)]
+                    result += [(i, t)]
                 }
             }
-            
-            stepIndex += 1
-        } while (stepIndex * step < count)
+            catch {
+                caughtError = error
+            }
+        }
         
         group.wait()
         
@@ -93,7 +49,7 @@ extension Swift.Collection where Self.Index == Int {
             throw error
         }
         
-        return result.sorted { $0.0 < $1.0 }.flatMap { $0.1 }
+        return result.sorted { $0.0 < $1.0 }.compactMap { $0.1 }
     }
 }
 
@@ -103,11 +59,10 @@ extension Swift.Sequence {
     public func parallelMap<T>(maxParallelism:Int? = nil, _
         transform: @escaping ((Iterator.Element) throws -> T)) throws -> [T]
     {
-        return try self.parallelFlatMap(maxParallelism: maxParallelism, transform)
+        return try self.parallelCompactMap(maxParallelism: maxParallelism, transform)
     }
     
-    public func parallelFlatMap<T>(maxParallelism:Int? = nil,
-                                _ transform: @escaping ((Iterator.Element) throws -> T?)) throws -> [T]
+    public func parallelCompactMap<T>(maxParallelism:Int? = nil, _ transform: @escaping ((Iterator.Element) throws -> T?)) throws -> [T]
     {
         if let maxParallelism = maxParallelism, maxParallelism == 1 {
             return try self.compactMap(transform)
@@ -115,7 +70,7 @@ extension Swift.Sequence {
         
         var result: [(Int64, T)] = []
         let group = DispatchGroup()
-        let lock = DispatchQueue(label: "pflatmap")
+        let lock = DispatchQueue(label: "pconcurrentmap")
         
         let parallelism:Int = {
             if let maxParallelism = maxParallelism {
