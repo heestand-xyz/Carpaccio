@@ -9,7 +9,7 @@
 import Foundation
 
 public extension Array where Iterator.Element == CGRect {
-    public var union: CGRect {
+    var union: CGRect {
         if self.count == 0 {
             return CGRect.zero
         }

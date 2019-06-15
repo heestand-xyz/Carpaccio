@@ -20,26 +20,26 @@ public protocol BitmapImage: NSObjectProtocol {
 }
 
 public extension BitmapImage {
-    public var bounds: CGRect
+    var bounds: CGRect
         {
         get {
             return CGRect(x: 0.0, y: 0.0, width: self.size.width, height: self.size.height)
         }
     }
     
-    public var aspectRatio: CGFloat
+    var aspectRatio: CGFloat
         {
         get {
             return self.size.aspectRatio
         }
     }
     
-    public func proportionalWidth(forHeight height: CGFloat) -> CGFloat
+    func proportionalWidth(forHeight height: CGFloat) -> CGFloat
     {
         return self.size.proportionalWidth(forHeight: height)
     }
     
-    public func proportionalHeight(forWidth width: CGFloat) -> CGFloat
+    func proportionalHeight(forWidth width: CGFloat) -> CGFloat
     {
         return self.size.proportionalHeight(forWidth: width)
     }

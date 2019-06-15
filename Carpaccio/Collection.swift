@@ -235,20 +235,13 @@ open class Collection
     /**
      Return images found in this collection whose URL is included in given input array or URLs.
      */
-    public func images(forURLs URLs: [Foundation.URL]) -> [Image]
-    {
-        var images = [Image]()
-        
-        for URL in URLs
-        {
-            if let i = self.images.index( where: { (image: Image) -> Bool in
-                return image.URL == URL
-            }) {
-                images.append(self.images[i])
+    public func images(forURLs urls: [Foundation.URL]) -> [Image] {
+        return images.filter {
+            if let url = $0.URL {
+                return urls.contains(url)
             }
+            return false
         }
-        
-        return images
     }
     
     // TODO: Create a specific type for a sparse distance matrix.
