@@ -8,8 +8,7 @@
 
 import Foundation
 
-public protocol ImageCollection: class
-{
+public protocol ImageCollection: class {
     var images: AnyCollection<Image> { get }
     var imageCount: Int { get }
     var imageURLs: AnyCollection<URL> { get }
@@ -19,32 +18,16 @@ public protocol ImageCollection: class
     func contains(image: Image) -> Bool
 }
 
-extension Carpaccio.Collection: ImageCollection
-{
-    public func contains(image: Image) -> Bool {
-        return self.images.contains(image)
-    }
-    
-    public var imageURLs: AnyCollection<URL> {
-        get {
-            return AnyCollection<URL>(self.images.lazy.compactMap { image in
-                return image.URL
-            })
-        }
-    }
-}
-
 public typealias ImageCollectionPrepareProgressHandler = (_ collection: Collection, _ count: Int, _ total: Int) -> Void
 public typealias ImageCollectionHandler = (Collection) -> Void
 public typealias ImageCollectionErrorHandler = (Error) -> Void
 
-open class Collection
-{
-    public let name:String
-    private(set) public var images: AnyCollection<Image>
-    private(set) public var imageCount: Int
-    public let URL: Foundation.URL?
-    
+open class Collection: ImageCollection {
+    private(set) open var name: String
+    private(set) open var images: AnyCollection<Image>
+    private(set) open var imageCount: Int
+    private(set) open var URL: Foundation.URL?
+
     public required init(name: String, URL: Foundation.URL, images: AnyCollection<Image>) {
         self.name = name
         self.URL = URL
@@ -55,24 +38,28 @@ open class Collection
     public init(contentsOf URL: Foundation.URL) throws {
         self.URL = URL
         self.name = URL.lastPathComponent
-        
         self.images = try Collection.load(contentsOfURL: URL)
         self.imageCount = Int(self.images.count)
     }
-    
-    public enum SortingScheme {
-        case none
-        case byName
+
+    open func contains(image: Image) -> Bool {
+        return images.contains(image)
     }
-    
+
+    open var imageURLs: AnyCollection<URL> {
+        return AnyCollection<URL>(self.images.lazy.compactMap { image in
+            return image.URL
+        })
+    }
+
     public typealias TotalImageCountCalculator = () -> Int
     
-    public class func imageURLs(at URL: URL) throws -> [URL] {
+    public class func imageURLs(at url: URL) throws -> [URL] {
         let fileManager = FileManager.default
-        let path = URL.path
+        let path = url.path
         
         guard let enumerator = fileManager.enumerator(atPath: path) else {
-            throw Image.Error.locationNotEnumerable(URL)
+            throw Image.Error.locationNotEnumerable(url)
         }
         
         let filterBlock: (URL) -> Bool = { url in
@@ -86,14 +73,19 @@ open class Collection
         
         let mapBlock:(Any) -> Foundation.URL = { anyPath -> Foundation.URL in
             let path = anyPath as! String
-            let url = URL.appendingPathComponent(path, isDirectory: false).absoluteURL
+            let url = url.appendingPathComponent(path, isDirectory: false).absoluteURL
             return url
         }
         
         let urls = enumerator.lazy.map(mapBlock).filter(filterBlock)
         return Array(urls)
     }
-    
+
+    public enum SortingScheme {
+        case none
+        case byName
+    }
+
     private var preparing: Bool = false
     private var prepared: Bool = false
     private var prepareProgressIncrementQueue = DispatchQueue(label: "com.sashimiapp.Carpaccio.Collection.prepareProgressCounter")
@@ -142,8 +134,8 @@ open class Collection
                 
                 let images: [Image]
                 do {
-                    images = try imageURLs.lazy.parallelCompactMap { URL -> Image? in
-                        let image = try Image(URL: URL)
+                    images = try imageURLs.lazy.parallelCompactMap { url -> Image? in
+                        let image = try Image(URL: url)
                         
                         do {
                             _ = try image.fetchMetadata()
@@ -174,11 +166,10 @@ open class Collection
                     })
                 }
                 
-                let returnedCollection = type(of: self).init(name: url.lastPathComponent,
-                                                             URL: url,
-                                                             images: returnedImages)
+                let returnedCollection = type(of: self).init(name: url.lastPathComponent, URL: url, images: returnedImages)
                 self.images = returnedImages
                 self.imageCount = Int(returnedImages.count)
+
                 completionHandler(returnedCollection)
             }
             catch {
