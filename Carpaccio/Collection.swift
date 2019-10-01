@@ -18,28 +18,29 @@ public protocol ImageCollection: class {
     func contains(image: Image) -> Bool
 }
 
-public typealias ImageCollectionPrepareProgressHandler = (_ collection: Collection, _ count: Int, _ total: Int) -> Void
-public typealias ImageCollectionHandler = (Collection) -> Void
-public typealias ImageCollectionErrorHandler = (Error) -> Void
-
 open class Collection: ImageCollection {
     private(set) open var name: String
     private(set) open var images: AnyCollection<Image>
-    private(set) open var imageCount: Int
     private(set) open var URL: Foundation.URL?
 
-    public required init(name: String, URL: Foundation.URL, images: AnyCollection<Image>) {
+    public func updateImages(_ images: AnyCollection<Image>) {
+        self.images = images
+    }
+
+    open var imageCount: Int {
+        return images.count
+    }
+
+    public init(name: String, URL: Foundation.URL, images: AnyCollection<Image>) {
         self.name = name
         self.URL = URL
         self.images = images
-        self.imageCount = Int(images.count)
     }
             
-    public init(contentsOf URL: Foundation.URL) throws {
-        self.URL = URL
-        self.name = URL.lastPathComponent
-        self.images = try Collection.load(contentsOfURL: URL)
-        self.imageCount = Int(self.images.count)
+    public init(contentsOf url: Foundation.URL) throws {
+        self.URL = url
+        self.name = url.lastPathComponent
+        self.images = try Collection.load(contentsOfURL: url)
     }
 
     open func contains(image: Image) -> Bool {
@@ -52,8 +53,19 @@ open class Collection: ImageCollection {
         })
     }
 
-    public typealias TotalImageCountCalculator = () -> Int
-    
+    /**
+     Return images found in this collection whose URL is included in given input array or URLs.
+     */
+    public func images(forURLs urls: [Foundation.URL]) -> [Image] {
+        return images.filter {
+            if let url = $0.URL {
+                return urls.contains(url)
+            }
+            return false
+        }
+    }
+
+    // MARK: - Loading images from the local filesystem
     public class func imageURLs(at url: URL) throws -> [URL] {
         let fileManager = FileManager.default
         let path = url.path
@@ -81,107 +93,7 @@ open class Collection: ImageCollection {
         return Array(urls)
     }
 
-    public enum SortingScheme {
-        case none
-        case byName
-    }
-
-    private var preparing: Bool = false
-    private var prepared: Bool = false
-    private var prepareProgressIncrementQueue = DispatchQueue(label: "com.sashimiapp.Carpaccio.Collection.prepareProgressCounter")
-    private var _preparedImageCount = 0
-    
-    func incrementPrepareProgress() -> Int {
-        var newCount: Int = 0
-        prepareProgressIncrementQueue.sync {
-            _preparedImageCount += 1
-            newCount = _preparedImageCount
-        }
-        return newCount
-    }
-    
-    /** Asynchronously initialise an image collection rooted at given URL, with all images found in the subtree prepared up to essential metadata having been loaded. */
-    public func prepare(
-        queue: DispatchQueue = DispatchQueue.global(),
-        sortingScheme: SortingScheme = .none,
-        maxMetadataLoadParallelism: Int? = nil,
-        allowImagesWithFailedMetadata: Bool = false,
-        progressHandler: @escaping ImageCollectionPrepareProgressHandler,
-        completionHandler: @escaping ImageCollectionHandler,
-        errorHandler: @escaping ImageCollectionErrorHandler) throws {
-        
-        guard let url = self.URL else {
-            throw Image.Error.urlMissing
-        }
-        guard !preparing else {
-            throw Image.Error.alreadyPreparing
-        }
-        guard !prepared else {
-            throw Image.Error.alreadyPrepared
-        }
-        
-        preparing = true
-        weak var weakCollection = self
-        
-        queue.async {
-            guard let collection = weakCollection else {
-                return
-            }
-            
-            do {
-                let imageURLs = try Collection.imageURLs(at: url)
-                let imageURLCount = imageURLs.count
-                
-                let images: [Image]
-                do {
-                    images = try imageURLs.lazy.parallelCompactMap { url -> Image? in
-                        let image = try Image(URL: url)
-                        
-                        do {
-                            _ = try image.fetchMetadata()
-                        } catch {
-                            if !allowImagesWithFailedMetadata {
-                                throw error
-                            }
-                        }
-                        
-                        let count = collection.incrementPrepareProgress()
-                        progressHandler(collection, count, imageURLCount)
-                        return image
-                    }
-                } catch {
-                    errorHandler(error)
-                    return
-                }
-                
-                let returnedImages: AnyCollection<Image>
-                
-                switch sortingScheme {
-                case .none:
-                    returnedImages = AnyCollection<Image>(images)
-                    
-                case .byName:
-                    returnedImages = AnyCollection<Image>(images.sorted { image1, image2 in
-                        return image1.name.compare(image2.name) == .orderedAscending
-                    })
-                }
-                
-                let returnedCollection = type(of: self).init(name: url.lastPathComponent, URL: url, images: returnedImages)
-                self.images = returnedImages
-                self.imageCount = Int(returnedImages.count)
-
-                completionHandler(returnedCollection)
-            }
-            catch {
-                errorHandler(Image.Error.loadingFailed(underlyingError: error))
-            }
-            
-            collection.prepared = true
-            collection.preparing = false
-        }
-    }
-    
-    public typealias ImageLoadHandler = (_ index:Int, _ image:Image) -> Void
+    public typealias ImageLoadHandler = (_ index: Int, _ image: Image) -> Void
     public typealias ImageLoadErrorHandler = (Error) -> Void
     
     public class func load(contentsOfURL URL: Foundation.URL, loadHandler: ImageLoadHandler? = nil) throws -> AnyCollection<Image>
@@ -222,19 +134,7 @@ open class Collection: ImageCollection {
             }
         }
     }
-    
-    /**
-     Return images found in this collection whose URL is included in given input array or URLs.
-     */
-    public func images(forURLs urls: [Foundation.URL]) -> [Image] {
-        return images.filter {
-            if let url = $0.URL {
-                return urls.contains(url)
-            }
-            return false
-        }
-    }
-    
+
     // TODO: Create a specific type for a sparse distance matrix.
     public func distanceMatrix(_ distance:Image.DistanceFunction) -> [[Double]] {
         return images.indices.lazy.compactMap { i in
