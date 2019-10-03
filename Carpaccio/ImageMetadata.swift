@@ -93,8 +93,11 @@ public struct ImageMetadata
             throw Image.Error.noMetadata
         }
         
-        let properties = NSDictionary(dictionary: imageProperties)
-        
+        let properties = NSDictionary(dictionary: imageProperties) as? [String: Any]
+        try self.init(cgImagePropertiesDictionary: properties ?? [:], imageSource: imageSource)
+    }
+
+    public init(cgImagePropertiesDictionary properties: [String: Any], imageSource: ImageIO.CGImageSource? = nil) throws {
         var fNumber: Double? = nil, focalLength: Double? = nil, focalLength35mm: Double? = nil, iso: Double? = nil, shutterSpeed: Double? = nil
         var colorSpace: CGColorSpace? = nil
         var width: CGFloat? = nil, height: CGFloat? = nil
@@ -152,7 +155,7 @@ public struct ImageMetadata
          If image dimension didn't appear in metadata (can happen with some RAW files like Nikon NEFs), take one more step:
          open the actual image. This thankfully doesn't appear to immediately load image data.
          */
-        if width == nil || height == nil {
+        if width == nil || height == nil, let imageSource = imageSource {
             let options: CFDictionary = [String(kCGImageSourceShouldCache): false] as NSDictionary as CFDictionary
             guard let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options) else {
                 throw Image.Error.failedToDecodeImage

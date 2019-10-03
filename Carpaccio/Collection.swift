@@ -23,7 +23,7 @@ open class Collection: ImageCollection {
     private(set) open var images: AnyCollection<Image>
     private(set) open var URL: Foundation.URL?
 
-    public func updateImages(_ images: AnyCollection<Image>) {
+    open func updateImages(_ images: AnyCollection<Image>) {
         self.images = images
     }
 
