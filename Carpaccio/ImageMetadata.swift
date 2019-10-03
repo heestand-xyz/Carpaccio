@@ -104,12 +104,11 @@ public struct ImageMetadata
         var timestamp: Date? = nil
         
         // Examine EXIF metadata
-        if let exif = properties[kCGImagePropertyExifDictionary as String] as? NSDictionary
-        {
+        if let exif = properties[kCGImagePropertyExifDictionary as String] as? [String: Any] {
             fNumber = (exif[kCGImagePropertyExifFNumber as String] as? NSNumber)?.doubleValue
             
-            if let colorSpaceName = exif[kCGImagePropertyExifColorSpace] as? NSString {
-                colorSpace = CGColorSpace(name: colorSpaceName)
+            if let colorSpaceName = exif[kCGImagePropertyExifColorSpace as String] as? String {
+                colorSpace = CGColorSpace(name: colorSpaceName as CFString)
             }
             
             focalLength = (exif[kCGImagePropertyExifFocalLength as String] as? NSNumber)?.doubleValue
@@ -140,7 +139,7 @@ public struct ImageMetadata
         // Examine TIFF metadata
         var cameraMaker: String? = nil, cameraModel: String? = nil, orientation: CGImagePropertyOrientation? = nil
         
-        if let tiff = properties[kCGImagePropertyTIFFDictionary as String] as? NSDictionary
+        if let tiff = properties[kCGImagePropertyTIFFDictionary as String] as? [String: Any]
         {
             cameraMaker = tiff[kCGImagePropertyTIFFMake as String] as? String
             cameraModel = tiff[kCGImagePropertyTIFFModel as String] as? String
@@ -150,11 +149,24 @@ public struct ImageMetadata
                 timestamp = ImageMetadata.EXIFDateFormatter.date(from: dateTimeString)
             }
         }
-        
-        /*
-         If image dimension didn't appear in metadata (can happen with some RAW files like Nikon NEFs), take one more step:
-         open the actual image. This thankfully doesn't appear to immediately load image data.
-         */
+
+        // We may be dealing with a metadata dictionary from ImageCaptureCore (have not found system-defined constants
+        // for these keys, yet)
+        if width == nil {
+            width = properties["PixelWidth"] as? CGFloat
+            height = properties["PixelHeight"] as? CGFloat
+        }
+        if colorSpace == nil {
+            if let pictureStyleDictionary = properties["{PictureStyle}"] as? [String: Any],
+                let colorSpaceArray = pictureStyleDictionary["PictStyleColorSpace"] as? [Any],
+                let colorSpaceName = colorSpaceArray.first as? String {
+
+                colorSpace = CGColorSpace(name: colorSpaceName as CFString)
+            }
+        }
+
+        // If image dimension didn't appear in metadata (as can happen with some RAW files like Nikon NEFs),
+        // take one more step: open the actual image. This thankfully doesn't appear to immediately load image data.
         if width == nil || height == nil, let imageSource = imageSource {
             let options: CFDictionary = [String(kCGImageSourceShouldCache): false] as NSDictionary as CFDictionary
             guard let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options) else {

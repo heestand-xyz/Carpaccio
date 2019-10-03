@@ -59,7 +59,13 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
     }
     
     public let name: String
-    public var thumbnailImage: BitmapImage? = nil
+    public var thumbnailImage: BitmapImage? = nil {
+        didSet {
+            if thumbnailImage != nil {
+                
+            }
+        }
+    }
     public var fullImage: BitmapImage?
 
     public var size: CGSize {
