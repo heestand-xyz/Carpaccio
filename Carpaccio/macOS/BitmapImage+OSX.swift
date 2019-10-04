@@ -8,7 +8,7 @@
 
 import AppKit
 
-extension NSImage:BitmapImage {
+extension NSImage: BitmapImage {
     public var nameString: String? {
         return {
             if let name = self.name() {
@@ -17,18 +17,15 @@ extension NSImage:BitmapImage {
             return nil
         }()
     }
-    
     public var cgImage:CGImage? {
         return self.cgImage(forProposedRect: nil, context: nil, hints: nil)
     }
 }
 
 extension BitmapImage {
-    
     public var nsImage:NSImage {
         return self as! NSImage
     }
-    
 }
 
 extension NSImage {

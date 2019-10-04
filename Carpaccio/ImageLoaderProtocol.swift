@@ -109,7 +109,7 @@ public enum ImageLoadingError: Swift.Error, LocalizedError
 public typealias ImageLoadingErrorHandler = (_ error: ImageLoadingError) -> Void
 
 public struct FullSizedImageLoadingOptions {
-    public var maximumPixelDimensions:CGSize?
+    public var maximumPixelDimensions: CGSize?
     public var allowDraftMode = true
     public var noiseReductionAmount = 0.5
     public var colorNoiseReductionAmount = 1.0
