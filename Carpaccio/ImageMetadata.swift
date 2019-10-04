@@ -85,6 +85,13 @@ public struct ImageMetadata
         self.timestamp = timestamp
     }
 
+    public static func cgColorSpaceNameForPictureStyleColorSpaceName(_ name: String) -> CFString? {
+        if name == "Adobe RGB" {
+            return CGColorSpace.adobeRGB1998
+        }
+        return nil
+    }
+
     public init(imageSource: ImageIO.CGImageSource) throws {
         if (CGImageSourceGetCount(imageSource) == 0) {
             throw Image.Error.sourceHasNoImages
@@ -159,9 +166,10 @@ public struct ImageMetadata
         if colorSpace == nil {
             if let pictureStyleDictionary = properties["{PictureStyle}"] as? [String: Any],
                 let colorSpaceArray = pictureStyleDictionary["PictStyleColorSpace"] as? [Any],
-                let colorSpaceName = colorSpaceArray.first as? String {
+                let colorSpaceName = colorSpaceArray.first as? String,
+                let cgColorSpaceName = ImageMetadata.cgColorSpaceNameForPictureStyleColorSpaceName(colorSpaceName) {
 
-                colorSpace = CGColorSpace(name: colorSpaceName as CFString)
+                colorSpace = CGColorSpace(name: cgColorSpaceName)
             }
         }
 
