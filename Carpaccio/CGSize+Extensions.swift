@@ -53,12 +53,10 @@ public extension CGSize {
         }
 
         if width < CGFloat.infinity && otherSize.width < CGFloat.infinity && width * (1.0 - ratio) > otherSize.width {
-            print("Width of \(otherSize) is smaller than \(self) by at least \(Int(ratio * 100.0))%")
             return true
         }
 
         if height < CGFloat.infinity && otherSize.height < CGFloat.infinity && height * (1.0 - ratio) > otherSize.height {
-            print("Height of \(otherSize) is smaller than \(self) by at least \(Int(ratio * 100.0))%")
             return true
         }
 

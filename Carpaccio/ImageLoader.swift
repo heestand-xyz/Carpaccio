@@ -47,12 +47,56 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol
             return self.helpAnchor
         }
     }
-    
+
     public enum ThumbnailScheme: Int {
         case never
         case decodeFullImage
         case fullImageWhenTooSmallThumbnail
         case fullImageWhenThumbnailMissing
+
+        /**
+         With this thumbnail scheme in effect, determine if it's any use to load a thumbnail embedded
+         in an image file at all.
+         */
+        public var shouldLoadThumbnail: Bool {
+            switch self {
+            case .decodeFullImage, .never:
+                return false
+            case .fullImageWhenThumbnailMissing, .fullImageWhenTooSmallThumbnail:
+                return true
+            }
+        }
+
+        /**
+
+         With this thumbnail scheme in effect, determine if the full size image should be loaded, given:
+
+         - An already loaded thumbnail image candidate (if any)
+
+         - A target maximum size (if any)
+
+         - A treshold for how much smaller the thumbnail image can be in each dimension, and still qualify.
+
+           Default ratio is 0.0, meaning the thumbnail image candidate must be at least intended target size,
+           in both width and height. If, say, a 20% smaller thumbnail image (in either width or height) is
+           fine to scale up for display, you would provide an argument value of `0.20`.
+
+         */
+        public func shouldLoadFullSizeImage(having thumbnailCGImage: CGImage?, maximumPixelDimensions maxSize: CGSize?, ratio: CGFloat = 0.0) -> Bool {
+            switch self {
+            case .decodeFullImage:
+                return true
+            case .fullImageWhenThumbnailMissing:
+                return thumbnailCGImage == nil
+            case .fullImageWhenTooSmallThumbnail:
+                guard let cgImage = thumbnailCGImage else {
+                    return true
+                }
+                return maxSize?.sizeIsSmaller(CGSize(width: cgImage.width, height: cgImage.height), byAtLeastRatio: ratio) ?? false
+            case .never:
+                return false
+            }
+        }
     }
     
     public let imageURL: URL
@@ -153,7 +197,7 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol
         return metadata
     }
     
-    func bailIfCancelled(_ checker: CancellationChecker?, _ message: String) throws {
+    private func stopIfCancelled(_ checker: CancellationChecker?, _ message: String) throws {
         if let checker = checker, checker() {
             throw ImageLoadingError.cancelled(url: self.imageURL, message: message)
         }
@@ -169,11 +213,13 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol
         guard self.thumbnailScheme != .never else {
             throw ImageLoadingError.loadingSetToNever(URL: self.imageURL, message: "Image thumbnail failed to be loaded as the loader responsible for it is set to never load thumbnails.")
         }
-        
-        try bailIfCancelled(cancelChecker, "Before loading thumbnail image")
+
+        // Load thumbnail
+        try stopIfCancelled(cancelChecker, "Before loading thumbnail image")
+
         let size = metadata.size
         let maxPixelSize = maximumSize?.maximumPixelSize(forImageSize: size)
-        let createFromFullImage = self.thumbnailScheme == .decodeFullImage
+        let createFromFullImage = thumbnailScheme == .decodeFullImage
         
         var options: [String: AnyObject] = [String(kCGImageSourceCreateThumbnailWithTransform): kCFBooleanTrue,
                                             String(createFromFullImage ? kCGImageSourceCreateThumbnailFromImageAlways : kCGImageSourceCreateThumbnailFromImageIfAbsent): kCFBooleanTrue]
@@ -183,28 +229,40 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol
         }
         
         let thumbnailImage: CGImage = try {
-            guard let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary?) else {
-                throw ImageLoadingError.noImageSource(URL: self.imageURL, message: "Failed to load thumbnail image: creating image source failed")
-            }
-            
-            if let colorSpace = self.colorSpace {
-                try bailIfCancelled(cancelChecker, "Before converting thumbnail image color space")
-                
-                guard let image = thumbnail.copy(colorSpace: colorSpace) else {
-                    throw ImageLoadingError.failedToConvertColorSpace(url: self.imageURL, message: "Failed to convert color space of image to \(colorSpace.name as String? ?? "untitled color space")")
+            let thumbnailCandidate = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary?)
+
+            // Retry from full image, if needed, and wasn't already
+            guard let thumbnail: CGImage = {
+                if !createFromFullImage && thumbnailScheme.shouldLoadFullSizeImage(having: thumbnailCandidate, maximumPixelDimensions: maximumSize, ratio: 0.20) {
+                    options[kCGImageSourceCreateThumbnailFromImageAlways as String] = NSNumber(booleanLiteral: true)
+                    return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary?)
                 }
-                return image
-            } else {
+                return thumbnailCandidate
+                }() else {
+                    throw ImageLoadingError.noImageSource(URL: self.imageURL, message: "Failed to load thumbnail")
+            }
+
+            // Convert color space, if needed
+            guard let colorSpace = self.colorSpace else {
                 return thumbnail
             }
+
+            try stopIfCancelled(cancelChecker, "Before converting color space of thumbnail image")
+
+            guard let image = thumbnail.copy(colorSpace: colorSpace) else {
+                throw ImageLoadingError.failedToConvertColorSpace(url: self.imageURL, message: "Failed to convert color space of image to \(colorSpace.name as String? ?? "untitled color space")")
+            }
+            return image
         }()
-        
-        if !allowCropping {
+
+        // Crop letterboxing out, if needed
+        guard allowCropping else {
             return (thumbnailImage, metadata)
-        } else {
-            try bailIfCancelled(cancelChecker, "Before cropping to native proportions")
-            return (ImageLoader.cropToNativeProportionsIfNeeded(thumbnailImage: thumbnailImage, metadata: metadata), metadata)
         }
+
+        try stopIfCancelled(cancelChecker, "Before cropping to native proportions")
+
+        return (ImageLoader.cropToNativeProportionsIfNeeded(thumbnailImage: thumbnailImage, metadata: metadata), metadata)
     }
     
     /**
