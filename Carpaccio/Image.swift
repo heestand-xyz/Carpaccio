@@ -367,7 +367,7 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
     }()
 
     public static var bakedImageFileExtensions: Set<String> = {
-        return Set(["jpg", "jpeg", "png", "tiff", "tif", "gif"])
+        return Set(["jpg", "jpeg", "png", "tiff", "tif", "gif", "heic"])
     }()
     
     public func hash(into hasher: inout Hasher) {
