@@ -196,13 +196,7 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol
         
         return metadata
     }
-    
-    private func stopIfCancelled(_ checker: CancellationChecker?, _ message: String) throws {
-        if let checker = checker, checker() {
-            throw ImageLoadingError.cancelled(url: self.imageURL, message: message)
-        }
-    }
-    
+
     public func loadThumbnailCGImage(maximumPixelDimensions maximumSize: CGSize? = nil,
                                      allowCropping: Bool = true,
                                      cancelled cancelChecker: CancellationChecker?) throws -> (CGImage, ImageMetadata)
@@ -249,9 +243,7 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol
 
             try stopIfCancelled(cancelChecker, "Before converting color space of thumbnail image")
 
-            guard let image = thumbnail.copy(colorSpace: colorSpace) else {
-                throw ImageLoadingError.failedToConvertColorSpace(url: self.imageURL, message: "Failed to convert color space of image to \(colorSpace.name as String? ?? "untitled color space")")
-            }
+            let image = try thumbnail.convertedToColorSpace(colorSpace)
             return image
         }()
 
@@ -274,7 +266,7 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol
      to extend 3:2 to 4:3 proportions. The solution: crop.
      
      */
-    private class func cropToNativeProportionsIfNeeded(thumbnailImage thumbnail: CGImage, metadata: ImageMetadata) -> CGImage
+    public class func cropToNativeProportionsIfNeeded(thumbnailImage thumbnail: CGImage, metadata: ImageMetadata) -> CGImage
     {
         let thumbnailSize = CGSize(width: CGFloat(thumbnail.width), height:CGFloat(thumbnail.height))
         let absThumbAspectDiff = abs(metadata.size.aspectRatio - thumbnailSize.aspectRatio)

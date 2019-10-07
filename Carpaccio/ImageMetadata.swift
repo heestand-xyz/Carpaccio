@@ -216,11 +216,11 @@ public struct ImageMetadata
         init(size: CGSize) {
             if size.width > size.height {
                 self = .landscape
-            }
-            else if size.width < size.height {
+            } else if size.width < size.height {
                 self = .portrait
+            } else {
+                self = .square
             }
-            self = .square
         }
     }
     

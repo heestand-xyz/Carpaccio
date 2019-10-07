@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		281CF5201EDAA3530040BBD8 /* Pixls in Resources */ = {isa = PBXBuildFile; fileRef = 281CF51E1EDAA34D0040BBD8 /* Pixls */; };
 		281CF5211EDAA3540040BBD8 /* Pixls in Resources */ = {isa = PBXBuildFile; fileRef = 281CF51E1EDAA34D0040BBD8 /* Pixls */; };
+		2869439A234B2B160012220E /* CGImage+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28694399234B2B160012220E /* CGImage+Extensions.swift */; };
 		289813341D494B1300B1BA5D /* ImageLoaderProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 289813331D494B1300B1BA5D /* ImageLoaderProtocol.swift */; };
 		289813381D4C8C2A00B1BA5D /* CGSize+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 289813371D4C8C2A00B1BA5D /* CGSize+Extensions.swift */; };
 		2898133A1D4DC26600B1BA5D /* ImageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 289813391D4DC26600B1BA5D /* ImageLoader.swift */; };
@@ -86,6 +87,7 @@
 
 /* Begin PBXFileReference section */
 		281CF51E1EDAA34D0040BBD8 /* Pixls */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Pixls; sourceTree = "<group>"; };
+		28694399234B2B160012220E /* CGImage+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CGImage+Extensions.swift"; sourceTree = "<group>"; };
 		289813331D494B1300B1BA5D /* ImageLoaderProtocol.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageLoaderProtocol.swift; sourceTree = "<group>"; };
 		289813371D4C8C2A00B1BA5D /* CGSize+Extensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "CGSize+Extensions.swift"; sourceTree = "<group>"; };
 		289813391D4DC26600B1BA5D /* ImageLoader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageLoader.swift; sourceTree = "<group>"; };
@@ -260,6 +262,7 @@
 				5FF2F7A71CE1563400C15E3A /* Image.swift */,
 				5FF2F7A81CE1563400C15E3A /* Collection.swift */,
 				289813371D4C8C2A00B1BA5D /* CGSize+Extensions.swift */,
+				28694399234B2B160012220E /* CGImage+Extensions.swift */,
 			);
 			name = Image;
 			sourceTree = "<group>";
@@ -523,6 +526,7 @@
 				2898133A1D4DC26600B1BA5D /* ImageLoader.swift in Sources */,
 				28B9AA081D462AFD00C4B03E /* ImageMetadata.swift in Sources */,
 				5FF2F7A91CE1563400C15E3A /* Image.swift in Sources */,
+				2869439A234B2B160012220E /* CGImage+Extensions.swift in Sources */,
 				5FAD66691D72FD3C006973C9 /* Collection+Extensions.swift in Sources */,
 				5F020A1B1D7B3D16004C1DE6 /* BitmapImage+OSX.swift in Sources */,
 				5F52830C21C3E2D6009F77F6 /* CGRect+Extensions.swift in Sources */,

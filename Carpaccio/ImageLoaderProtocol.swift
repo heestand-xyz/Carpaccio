@@ -204,4 +204,15 @@ public extension ImageLoaderProtocol {
     func loadFullSizeImage() throws -> (BitmapImage, ImageMetadata) {
         return try self.loadFullSizeImage(options: FullSizedImageLoadingOptions())
     }
+
+    /**
+     Convenience func to be called by image loader implementations themselves, to check if a particular
+     thumbnail or full size image loading operation has been cancelled.
+     @throws An `ImageLoadingError.cancelled` error if cancellation checker returns `true`.
+     */
+    func stopIfCancelled(_ checker: CancellationChecker?, _ message: String) throws {
+        if let checker = checker, checker() {
+            throw ImageLoadingError.cancelled(url: self.imageURL, message: message)
+        }
+    }
 }
