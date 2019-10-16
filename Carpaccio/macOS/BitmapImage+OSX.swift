@@ -17,8 +17,17 @@ extension NSImage: BitmapImage {
             return nil
         }()
     }
-    public var cgImage:CGImage? {
+
+    public var cgImage: CGImage? {
         return self.cgImage(forProposedRect: nil, context: nil, hints: nil)
+    }
+
+    public var bestAvailableCGImage: CGImage? {
+        guard let rep = bestRepresentation(for: NSRect.infinite, context: nil, hints: nil) else {
+            return nil
+        }
+        var r = NSRect.infinite
+        return rep.cgImage(forProposedRect: &r, context: nil, hints: nil)
     }
 }
 

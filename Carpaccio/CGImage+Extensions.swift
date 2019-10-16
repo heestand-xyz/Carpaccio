@@ -10,6 +10,8 @@ import CoreGraphics
 
 public enum CGImageExtensionError: Swift.Error {
     case failedToConvertColorSpace
+    case failedToDecodePNGData
+    case failedToEncodeAsPNGData
 }
 
 public extension CGImage {
@@ -18,5 +20,31 @@ public extension CGImage {
             throw CGImageExtensionError.failedToConvertColorSpace
         }
         return convertedImage
+    }
+
+    static func cgImageFromPNGData(_ pngData: Data) throws -> CGImage {
+        guard let source = CGDataProvider(data: pngData as CFData) else {
+            throw CGImageExtensionError.failedToDecodePNGData
+        }
+        guard let image = CGImage(pngDataProviderSource: source, decode: nil, shouldInterpolate: false, intent: .perceptual) else {
+            throw CGImageExtensionError.failedToDecodePNGData
+        }
+        return image
+    }
+
+    func encodedAsPNGData(hasAlpha: Bool) throws -> Data {
+        guard
+            let mutableData = CFDataCreateMutable(nil, 0),
+            let imageDestination = CGImageDestinationCreateWithData(mutableData, kUTTypePNG, 1, nil) else {
+                throw CGImageExtensionError.failedToEncodeAsPNGData
+        }
+
+        let options: [String: Any] = [kCGImagePropertyHasAlpha as String: hasAlpha]
+
+        CGImageDestinationAddImage(imageDestination, self, options as CFDictionary)
+        CGImageDestinationFinalize(imageDestination)
+
+        let pngData = mutableData as Data
+        return pngData
     }
 }
