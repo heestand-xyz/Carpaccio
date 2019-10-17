@@ -23,14 +23,6 @@ open class Collection: ImageCollection {
     private(set) open var images: AnyCollection<Image>
     private(set) open var URL: Foundation.URL?
 
-    open func updateImages(_ images: AnyCollection<Image>) {
-        self.images = images
-    }
-
-    open var imageCount: Int {
-        return images.count
-    }
-
     public init(name: String, URL: Foundation.URL, images: AnyCollection<Image>) {
         self.name = name
         self.URL = URL
@@ -47,10 +39,18 @@ open class Collection: ImageCollection {
         return images.contains(image)
     }
 
+    open var imageCount: Int {
+        return images.count
+    }
+
     open var imageURLs: AnyCollection<URL> {
         return AnyCollection<URL>(self.images.lazy.compactMap { image in
             return image.URL
         })
+    }
+
+    open func updateImages(_ images: AnyCollection<Image>) {
+        self.images = images
     }
 
     /**
@@ -65,8 +65,13 @@ open class Collection: ImageCollection {
         }
     }
 
+    public typealias URLFilter = (URL) -> Bool
+
     // MARK: - Loading images from the local filesystem
-    public class func imageURLs(at url: URL) throws -> [URL] {
+    public class func imageURLs(
+        at url: URL,
+        filteringSubdirectoriesWith subdirectoryFilter: URLFilter? = nil) throws -> [URL] {
+
         let fileManager = FileManager.default
         let path = url.path
         
@@ -75,10 +80,17 @@ open class Collection: ImageCollection {
         }
         
         let filterBlock: (URL) -> Bool = { url in
-            if let attributes = enumerator.fileAttributes, attributes[.type] as! FileAttributeType == .typeRegular {
-                let pathExtension = url.pathExtension.lowercased()
-                let isImage = Image.imageFileExtensions.contains(pathExtension)
-                return isImage
+            if let attributes = enumerator.fileAttributes {
+                let type = attributes[.type] as! FileAttributeType
+                if type == .typeDirectory {
+                    if let filter = subdirectoryFilter, !filter(url) {
+                        enumerator.skipDescendants()
+                    }
+                } else if type == .typeRegular {
+                    let pathExtension = url.pathExtension.lowercased()
+                    let isImage = Image.imageFileExtensions.contains(pathExtension)
+                    return isImage
+                }
             }
             return false
         }
