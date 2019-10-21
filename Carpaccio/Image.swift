@@ -15,8 +15,6 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
         case noLoader(Image)
         case noFileExtension // FIXME: lift this restriction.
         case urlMissing
-        case alreadyPreparing
-        case alreadyPrepared
         case locationNotEnumerable(URL)
         case loadingFailed(underlyingError: Swift.Error)
         case noThumbnail(Image)
@@ -34,10 +32,6 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
                 return "Operation failed because image lacks a file extension"
             case .urlMissing:
                 return "Operation failed because image has no URL"
-            case .alreadyPreparing:
-                return "Attempt to prepare image failed because image is already being prepared"
-            case .alreadyPrepared:
-                return "Operation failed because image has already been prepared"
             case .locationNotEnumerable(let URL):
                 return "Operation failed because location at \(URL) is not possible to read from."
             case .loadingFailed(let underlyingError):
