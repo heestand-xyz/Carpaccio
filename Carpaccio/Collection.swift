@@ -69,14 +69,14 @@ open class Collection: ImageCollection {
 
     // MARK: - Loading images from the local filesystem
     public class func imageURLs(
-        at url: URL,
+        at directoryURL: URL,
         filteringSubdirectoriesWith subdirectoryFilter: URLFilter? = nil) throws -> [URL] {
 
         let fileManager = FileManager.default
-        let path = url.path
+        let path = directoryURL.path
         
         guard let enumerator = fileManager.enumerator(atPath: path) else {
-            throw Image.Error.locationNotEnumerable(url)
+            throw Image.Error.locationNotEnumerable(directoryURL)
         }
         
         let filterBlock: (URL) -> Bool = { url in
@@ -97,7 +97,7 @@ open class Collection: ImageCollection {
         
         let mapBlock:(Any) -> Foundation.URL = { anyPath -> Foundation.URL in
             let path = anyPath as! String
-            let url = url.appendingPathComponent(path, isDirectory: false).absoluteURL
+            let url = directoryURL.appendingPathComponent(path).absoluteURL
             return url
         }
         
