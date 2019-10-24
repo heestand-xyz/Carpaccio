@@ -72,14 +72,17 @@ open class Collection: ImageCollection {
         at directoryURL: URL,
         filteringSubdirectoriesWith subdirectoryFilter: URLFilter? = nil) throws -> [URL] {
 
-        let fileManager = FileManager.default
-        let path = directoryURL.path
-        
-        guard let enumerator = fileManager.enumerator(atPath: path) else {
+        guard let enumerator = FileManager.default.enumerator(atPath: directoryURL.path) else {
             throw Image.Error.locationNotEnumerable(directoryURL)
         }
         
-        let filterBlock: (URL) -> Bool = { url in
+        let urls: [URL] = enumerator.compactMap({
+            guard let relativePath = $0 as? String else {
+                return nil
+            }
+
+            let url = directoryURL.appendingPathComponent(relativePath).absoluteURL
+
             if let attributes = enumerator.fileAttributes {
                 let type = attributes[.type] as! FileAttributeType
                 if type == .typeDirectory {
@@ -87,22 +90,17 @@ open class Collection: ImageCollection {
                         enumerator.skipDescendants()
                     }
                 } else if type == .typeRegular {
-                    let pathExtension = url.pathExtension.lowercased()
-                    let isImage = Image.imageFileExtensions.contains(pathExtension)
-                    return isImage
+                    let isImage = Image.imageFileExtensions.contains(url.pathExtension.lowercased())
+                    if isImage {
+                        return url
+                    }
                 }
             }
-            return false
-        }
-        
-        let mapBlock:(Any) -> Foundation.URL = { anyPath -> Foundation.URL in
-            let path = anyPath as! String
-            let url = directoryURL.appendingPathComponent(path).absoluteURL
-            return url
-        }
-        
-        let urls = enumerator.lazy.map(mapBlock).filter(filterBlock)
-        return Array(urls)
+
+            return nil
+        })
+
+        return urls
     }
 
     public typealias ImageLoadHandler = (_ index: Int, _ image: Image) -> Void

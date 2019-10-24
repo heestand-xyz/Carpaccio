@@ -10,13 +10,11 @@ import Foundation
 
 // Inspired by http://moreindirection.blogspot.co.uk/2015/07/gcd-and-parallel-collections-in-swift.html
 extension Swift.Collection where Self.Index == Int {
-    public func parallelMap<T>(_ transform: @escaping ((Iterator.Element) throws -> T)) throws -> [T]
-    {
+    public func parallelMap<T>(_ transform: @escaping ((Iterator.Element) throws -> T)) throws -> [T] {
         return try self.parallelCompactMap(transform)
     }
     
-    public func parallelCompactMap<T>(_ transform: @escaping ((Iterator.Element) throws -> T?)) throws -> [T]
-    {
+    public func parallelCompactMap<T>(_ transform: @escaping ((Iterator.Element) throws -> T?)) throws -> [T] {
         guard !self.isEmpty else {
             return []
         }
@@ -53,7 +51,8 @@ extension Swift.Collection where Self.Index == Int {
     }
 }
 
-
+// Commented out, for now, due to unreliable operation: some elements might go missing from the result.
+/*
 // Inspired by http://moreindirection.blogspot.co.uk/2015/07/gcd-and-parallel-collections-in-swift.html
 extension Swift.Sequence {
     public func parallelMap<T>(maxParallelism:Int? = nil, _
@@ -116,3 +115,4 @@ extension Swift.Sequence {
                      .compactMap { $0.1 }
     }
 }
+ */
