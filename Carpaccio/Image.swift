@@ -63,7 +63,10 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
         return size
     }
     
-    public let URL: Foundation.URL?
+    public private(set) var URL: Foundation.URL?
+    public func updateURL(_ url: Foundation.URL) {
+        self.URL = url
+    }
     
     private var _directoryPath: String?
     public var directoryPath: String? {
