@@ -104,7 +104,7 @@ public struct ImageMetadata
         try self.init(cgImagePropertiesDictionary: properties ?? [:], imageSource: imageSource)
     }
 
-    public init(cgImagePropertiesDictionary properties: [String: Any], imageSource: ImageIO.CGImageSource? = nil) throws {
+    public init(cgImagePropertiesDictionary properties: [AnyHashable: Any], imageSource: ImageIO.CGImageSource? = nil) throws {
         var fNumber: Double? = nil, focalLength: Double? = nil, focalLength35mm: Double? = nil, iso: Double? = nil, shutterSpeed: Double? = nil
         var colorSpace: CGColorSpace? = nil
         var width: CGFloat? = nil, height: CGFloat? = nil

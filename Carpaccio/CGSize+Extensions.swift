@@ -10,7 +10,7 @@ import Foundation
 import QuartzCore
 
 public extension CGSize {
-    public var aspectRatio: CGFloat {
+    var aspectRatio: CGFloat {
         if self.width == 0.0 {
             return 0.0
         }
@@ -20,15 +20,15 @@ public extension CGSize {
         return self.width / self.height
     }
     
-    public func proportionalWidth(forHeight height: CGFloat) -> CGFloat {
+    func proportionalWidth(forHeight height: CGFloat) -> CGFloat {
         return height * self.aspectRatio
     }
     
-    public func proportionalHeight(forWidth width: CGFloat) -> CGFloat {
+    func proportionalHeight(forWidth width: CGFloat) -> CGFloat {
         return width / self.aspectRatio
     }
     
-    public func distance(to: CGSize) -> CGFloat {
+    func distance(to: CGSize) -> CGFloat {
         let xDist = to.width - self.width
         let yDist = to.width - self.width
         return sqrt((xDist * xDist) + (yDist * yDist))
@@ -47,7 +47,7 @@ public extension CGSize {
 
      */
     // TODO: Add examples for sizeIsSmaller() !!!
-    public func sizeIsSmaller(_ otherSize: CGSize, byAtLeastRatio ratio: CGFloat = 1.0) -> Bool {
+    func sizeIsSmaller(_ otherSize: CGSize, byAtLeastRatio ratio: CGFloat = 1.0) -> Bool {
         guard ratio >= 0.0 && ratio < 1.0 else {
             return false
         }
