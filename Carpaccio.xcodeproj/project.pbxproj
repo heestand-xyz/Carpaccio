@@ -10,6 +10,7 @@
 		281CF5201EDAA3530040BBD8 /* Pixls in Resources */ = {isa = PBXBuildFile; fileRef = 281CF51E1EDAA34D0040BBD8 /* Pixls */; };
 		281CF5211EDAA3540040BBD8 /* Pixls in Resources */ = {isa = PBXBuildFile; fileRef = 281CF51E1EDAA34D0040BBD8 /* Pixls */; };
 		2869439A234B2B160012220E /* CGImage+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28694399234B2B160012220E /* CGImage+Extensions.swift */; };
+		28744DB0236D6CF500448E23 /* Carpaccio.h in Headers */ = {isa = PBXBuildFile; fileRef = 5F1E22801CDEA9D90083FD6F /* Carpaccio.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		289813341D494B1300B1BA5D /* ImageLoaderProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 289813331D494B1300B1BA5D /* ImageLoaderProtocol.swift */; };
 		289813381D4C8C2A00B1BA5D /* CGSize+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 289813371D4C8C2A00B1BA5D /* CGSize+Extensions.swift */; };
 		2898133A1D4DC26600B1BA5D /* ImageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 289813391D4DC26600B1BA5D /* ImageLoader.swift */; };
@@ -37,7 +38,6 @@
 		5F1DA7951E2BBC5C00F1474D /* BitmapImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F020A1D1D7B460C004C1DE6 /* BitmapImage.swift */; };
 		5F1DA7961E2BBC6500F1474D /* CGSize+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 289813371D4C8C2A00B1BA5D /* CGSize+Extensions.swift */; };
 		5F1DA7971E2BBD0900F1474D /* BitmapImage+OSX.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F020A1A1D7B3D16004C1DE6 /* BitmapImage+OSX.swift */; };
-		5F1E22811CDEA9D90083FD6F /* Carpaccio.h in Headers */ = {isa = PBXBuildFile; fileRef = 5F1E22801CDEA9D90083FD6F /* Carpaccio.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		5F1E22881CDEA9D90083FD6F /* Carpaccio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5F1E227D1CDEA9D90083FD6F /* Carpaccio.framework */; };
 		5F1E228D1CDEA9D90083FD6F /* CarpaccioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F1E228C1CDEA9D90083FD6F /* CarpaccioTests.swift */; };
 		5F1E229C1CDEAABF0083FD6F /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5F1E229B1CDEAABF0083FD6F /* Cocoa.framework */; };
@@ -292,7 +292,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5F1E22811CDEA9D90083FD6F /* Carpaccio.h in Headers */,
+				28744DB0236D6CF500448E23 /* Carpaccio.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -426,6 +426,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 			);
 			mainGroup = 5F1E22731CDEA9D90083FD6F;
