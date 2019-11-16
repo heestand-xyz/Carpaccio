@@ -28,7 +28,7 @@ class CarpaccioTests: XCTestCase {
         
         try! FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true, attributes: [:])
         
-        let converter = ImageLoader(imageURL: img1URL, thumbnailScheme: .fullImageWhenThumbnailMissing, colorSpace: nil)
+        let converter = ImageLoader(imageURL: img1URL, thumbnailScheme: .fullImageIfThumbnailMissing, colorSpace: nil)
         
         let (thumb, imageMetadata) = try! converter.loadThumbnailImage(maximumPixelDimensions: nil, allowCropping: true, cancelled: nil)
         
@@ -63,7 +63,7 @@ class CarpaccioTests: XCTestCase {
         
         try! FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true, attributes: [:])
         
-        let converter = ImageLoader(imageURL: img1URL, thumbnailScheme: .fullImageWhenThumbnailMissing, colorSpace: nil)
+        let converter = ImageLoader(imageURL: img1URL, thumbnailScheme: .fullImageIfThumbnailMissing, colorSpace: nil)
         
         let (image, imageMetadata) = try! converter.loadFullSizeImage()
         
@@ -146,7 +146,7 @@ class CarpaccioTests: XCTestCase {
             return
         }
         
-        let loader = ImageLoader(imageURL: url, thumbnailScheme: .fullImageWhenThumbnailMissing, colorSpace: nil)
+        let loader = ImageLoader(imageURL: url, thumbnailScheme: .fullImageIfThumbnailMissing, colorSpace: nil)
         
         XCTAssertThrowsError(try loader.loadImageMetadataIfNeeded())
         XCTAssertThrowsError(try loader.loadImageMetadataIfNeeded(forceReload: true))
@@ -159,7 +159,7 @@ class CarpaccioTests: XCTestCase {
             return
         }
         
-        let loader = ImageLoader(imageURL: url, thumbnailScheme: .fullImageWhenThumbnailMissing, colorSpace: nil)
+        let loader = ImageLoader(imageURL: url, thumbnailScheme: .fullImageIfThumbnailMissing, colorSpace: nil)
         XCTAssertThrowsError(try loader.loadThumbnailImage(maximumPixelDimensions: nil, allowCropping: true, cancelled: nil))
     }
 }

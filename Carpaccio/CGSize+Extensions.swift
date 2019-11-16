@@ -36,27 +36,25 @@ public extension CGSize {
 
     /**
 
-     Determine if another size is smaller, in either dimension, by at least a given ratio, which should be
-     in the range 0.0 < ratio <= 1.0. The default ratio is 0.0, which means comparing dimensions 1:1.
+     Determine if either the width, or height, of this size is equal to, or larger than, a given maximum target
+     size's width or height.
 
-     If any dimension of either size is set to CGFloat.infinity, that axis will not be considered.
+     The math performed can be scaled by a minimum ratio. For example, if a 50% smaller width or height is enough,
+     you should use a `ratio` value of `0.50`. The default is a minimum ratio of `1.0`, meaning at least one of
+     this size's dimensions must be greater than or equal to the same dimension of `targetMaxSize`.
 
-     Examples:
-
-     ...
+     Note that if a dimension of `targetMaxSize` is set to `CGFloat.infinity`, that particular axis will not be
+     considered. In such a case, _any_ value of this size, on that axis, is considered sufficient.
 
      */
-    // TODO: Add examples for sizeIsSmaller() !!!
-    func sizeIsSmaller(_ otherSize: CGSize, byAtLeastRatio ratio: CGFloat = 1.0) -> Bool {
-        guard ratio >= 0.0 && ratio < 1.0 else {
-            return false
-        }
-
-        if width < CGFloat.infinity && otherSize.width < CGFloat.infinity && width * (1.0 - ratio) > otherSize.width {
+    func isSufficientInAnyDimension(comparedTo targetMaxSize: CGSize, atMinimumRatio ratio: CGFloat = 1.0) -> Bool {
+        let widthIsSufficient = targetMaxSize.width == CGFloat.infinity || ((1.0 / ratio) * width) >= targetMaxSize.width
+        if widthIsSufficient {
             return true
         }
 
-        if height < CGFloat.infinity && otherSize.height < CGFloat.infinity && height * (1.0 - ratio) > otherSize.height {
+        let heightIsSufficient = targetMaxSize.height == CGFloat.infinity || ((1.0 / ratio) * height) >= targetMaxSize.height
+        if heightIsSufficient {
             return true
         }
 

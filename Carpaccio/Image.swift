@@ -145,7 +145,7 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
             } else if cachedLoader.colorSpace == colorSpace {
                 return cachedLoader
             } else {
-                let newLoader = Image.defaultImageLoaderType.init(imageLoader: cachedLoader, thumbnailScheme: .fullImageWhenTooSmallThumbnail, colorSpace: colorSpace)
+                let newLoader = Image.defaultImageLoaderType.init(imageLoader: cachedLoader, thumbnailScheme: .fullImageIfThumbnailTooSmall, colorSpace: colorSpace)
                 cachedImageLoader = newLoader
                 return newLoader
             }
@@ -156,9 +156,9 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
         }
         
         if Image.isRAWImage(at: url) {
-            cachedImageLoader = Image.defaultImageLoaderType.init(imageURL: url, thumbnailScheme: .fullImageWhenTooSmallThumbnail, colorSpace: colorSpace)
+            cachedImageLoader = Image.defaultImageLoaderType.init(imageURL: url, thumbnailScheme: .fullImageIfThumbnailTooSmall, colorSpace: colorSpace)
         } else if Image.isBakedImage(at: url) {
-            cachedImageLoader = Image.defaultImageLoaderType.init(imageURL: url, thumbnailScheme: .fullImageWhenTooSmallThumbnail, colorSpace: colorSpace)
+            cachedImageLoader = Image.defaultImageLoaderType.init(imageURL: url, thumbnailScheme: .fullImageIfThumbnailTooSmall, colorSpace: colorSpace)
         }
         
         return cachedImageLoader
@@ -259,7 +259,6 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
         }
         
         let maxDim = presentedHeight != nil ? CGSize(constrainHeight: presentedHeight! * scaleFactor) : nil
-
         let (thumbnailImage, imgMetadata) = try loader.loadThumbnailImage(maximumPixelDimensions: maxDim, cancelled: cancelled)
         
         if self.metadata == nil {
@@ -275,18 +274,17 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
     
     public func fetchFullSizeImage(presentedHeight: CGFloat? = nil,
                                    store: Bool = false,
-                                   scaleFactor:CGFloat = 2.0,
+                                   scaleFactor: CGFloat = 2.0,
                                    colorSpace: CGColorSpace?) throws -> BitmapImage
     {
         guard self.URL != nil else {
             throw Error.urlMissing
         }
         
-        let maxDimensions:CGSize? = {
+        let maxDimensions: CGSize? = {
             if let presentedHeight = presentedHeight {
                 return CGSize(constrainHeight: presentedHeight * scaleFactor)
             }
-            
             return nil
         }()
         

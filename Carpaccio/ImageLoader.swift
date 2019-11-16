@@ -50,9 +50,9 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol
 
     public enum ThumbnailScheme: Int {
         case never
-        case decodeFullImage
-        case fullImageWhenTooSmallThumbnail
-        case fullImageWhenThumbnailMissing
+        case alwaysDecodeFullImage
+        case fullImageIfThumbnailTooSmall
+        case fullImageIfThumbnailMissing
 
         /**
          With this thumbnail scheme in effect, determine if it's any use to load a thumbnail embedded
@@ -60,9 +60,9 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol
          */
         public var shouldLoadThumbnail: Bool {
             switch self {
-            case .decodeFullImage, .never:
+            case .alwaysDecodeFullImage, .never:
                 return false
-            case .fullImageWhenThumbnailMissing, .fullImageWhenTooSmallThumbnail:
+            case .fullImageIfThumbnailMissing, .fullImageIfThumbnailTooSmall:
                 return true
             }
         }
@@ -77,22 +77,30 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol
 
          - A treshold for how much smaller the thumbnail image can be in each dimension, and still qualify.
 
-           Default ratio is 0.0, meaning the thumbnail image candidate must be at least intended target size,
-           in both width and height. If, say, a 20% smaller thumbnail image (in either width or height) is
-           fine to scale up for display, you would provide an argument value of `0.20`.
+           Default ratio is 1.0, meaning either the thumbnail image candidate's width or height must be equal
+           to, or greater than, the width or height of the given target maximum size. If, say, a 20% smaller
+           thumbnail image (in either width or height) is fine to scale up for display, you would provide a
+           `ratio` value of `0.80`.
 
          */
-        public func shouldLoadFullSizeImage(having thumbnailCGImage: CGImage?, maximumPixelDimensions maxSize: CGSize?, ratio: CGFloat = 0.0) -> Bool {
+        public func shouldLoadFullSizeImage(having thumbnailCGImage: CGImage?, desiredMaximumPixelDimensions targetMaxSize: CGSize?, ratio: CGFloat = 1.0) -> Bool {
             switch self {
-            case .decodeFullImage:
+            case .alwaysDecodeFullImage:
                 return true
-            case .fullImageWhenThumbnailMissing:
+            case .fullImageIfThumbnailMissing:
                 return thumbnailCGImage == nil
-            case .fullImageWhenTooSmallThumbnail:
+            case .fullImageIfThumbnailTooSmall:
                 guard let cgImage = thumbnailCGImage else {
+                    // No candidate thumbnail has been loaded yet, so must load full image
                     return true
                 }
-                return maxSize?.sizeIsSmaller(CGSize(width: cgImage.width, height: cgImage.height), byAtLeastRatio: ratio) ?? false
+                guard let targetMaxSize = targetMaxSize else {
+                    // There is no size requirement, so no point in loading full image
+                    return false
+                }
+                let candidateSize = CGSize(width: cgImage.width, height: cgImage.height)
+                let should = !candidateSize.isSufficientInAnyDimension(comparedTo: targetMaxSize, atMinimumRatio: ratio)
+                return should
             case .never:
                 return false
             }
@@ -213,7 +221,7 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol
 
         let size = metadata.size
         let maxPixelSize = maximumSize?.maximumPixelSize(forImageSize: size)
-        let createFromFullImage = thumbnailScheme == .decodeFullImage
+        let createFromFullImage = thumbnailScheme == .alwaysDecodeFullImage
         
         var options: [String: AnyObject] = [String(kCGImageSourceCreateThumbnailWithTransform): kCFBooleanTrue,
                                             String(createFromFullImage ? kCGImageSourceCreateThumbnailFromImageAlways : kCGImageSourceCreateThumbnailFromImageIfAbsent): kCFBooleanTrue]
@@ -227,13 +235,13 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol
 
             // Retry from full image, if needed, and wasn't already
             guard let thumbnail: CGImage = {
-                if !createFromFullImage && thumbnailScheme.shouldLoadFullSizeImage(having: thumbnailCandidate, maximumPixelDimensions: maximumSize, ratio: 0.20) {
+                if !createFromFullImage && thumbnailScheme.shouldLoadFullSizeImage(having: thumbnailCandidate, desiredMaximumPixelDimensions: maximumSize, ratio: 1.0) {
                     options[kCGImageSourceCreateThumbnailFromImageAlways as String] = NSNumber(booleanLiteral: true)
                     return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary?)
                 }
                 return thumbnailCandidate
-                }() else {
-                    throw ImageLoadingError.noImageSource(URL: self.imageURL, message: "Failed to load thumbnail")
+            }() else {
+                throw ImageLoadingError.noImageSource(URL: self.imageURL, message: "Failed to load thumbnail")
             }
 
             // Convert color space, if needed
