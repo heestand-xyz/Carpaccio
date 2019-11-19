@@ -75,7 +75,7 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol
 
          - A target maximum size (if any)
 
-         - A treshold for how much smaller the thumbnail image can be in each dimension, and still qualify.
+         - A threshold for how much smaller the thumbnail image can be in each dimension, and still qualify.
 
            Default ratio is 1.0, meaning either the thumbnail image candidate's width or height must be equal
            to, or greater than, the width or height of the given target maximum size. If, say, a 20% smaller
