@@ -16,18 +16,14 @@ import ImageIO
  Implementation of ImageLoaderProtocol, capable of dealing with RAW file formats,
  as well common compressed image file formats.
  */
-public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol
-{
+public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
     enum Error: Swift.Error, LocalizedError {
         case filterInitializationFailed(URL: URL)
-        case failedToOpenImage(message: String)
 
         var errorDescription: String? {
             switch self {
             case .filterInitializationFailed(let URL):
                 return "Failed to initialize image loader filter for image at URL \(URL)"
-            case .failedToOpenImage(let msg):
-                return "Failed to open image: \(msg)"
             }
         }
 
@@ -35,14 +31,13 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol
             switch self {
             case .filterInitializationFailed(let URL):
                 return "Failed to initialize image loader filter for file at \"\(URL)\""
-            case .failedToOpenImage(let msg):
-                return msg
             }
         }
 
         var helpAnchor: String? {
             return "Ensure that images of the kind you are trying to load are supported by your system."
         }
+
         var recoverySuggestion: String? {
             return self.helpAnchor
         }
@@ -99,7 +94,7 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol
                     return false
                 }
                 let candidateSize = CGSize(width: cgImage.width, height: cgImage.height)
-                let should = !candidateSize.isSufficientInAnyDimension(comparedTo: targetMaxSize, atMinimumRatio: ratio)
+                let should = !candidateSize.isSufficientToFulfill(targetSize: targetMaxSize, atMinimumRatio: ratio)
                 return should
             case .never:
                 return false
@@ -135,7 +130,7 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol
                        String(kCGImageSourceShouldAllowFloat): true] as NSDictionary as CFDictionary
         
         guard let imageSource = CGImageSourceCreateWithURL(imageURL as CFURL, options) else{
-            throw Error.failedToOpenImage(message: "Failed to open image at \(imageURL)")
+            throw CGImageExtensionError.failedToOpenCGImage(url: imageURL)
         }
         
         return imageSource
@@ -422,52 +417,6 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol
     }
 }
 
-public extension CGSize
-{
-    init(constrainWidth w: CGFloat) {
-        self.init(width: w, height: CGFloat.infinity)
-    }
-    
-    init(constrainHeight h: CGFloat) {
-        self.init(width: CGFloat.infinity, height: h)
-    }
-    
-    /** Assuming this NSSize value describes desired maximum width and/or height of a scaled output image, return appropriate value for the `kCGImageSourceThumbnailMaxPixelSize` option. */
-    func maximumPixelSize(forImageSize imageSize: CGSize) -> CGFloat
-    {
-        let widthIsUnconstrained = self.width > imageSize.width
-        let heightIsUnconstrained = self.height > imageSize.height
-        let ratio = imageSize.aspectRatio
-        
-        if widthIsUnconstrained && heightIsUnconstrained
-        {
-            if ratio > 1.0 {
-                return imageSize.width
-            }
-            return imageSize.height
-        }
-        else if widthIsUnconstrained {
-            if ratio > 1.0 {
-                return imageSize.proportionalWidth(forHeight: self.height)
-            }
-            return self.height
-        }
-        else if heightIsUnconstrained {
-            if ratio > 1.0 {
-                return self.width
-            }
-            return imageSize.proportionalHeight(forWidth: self.width)
-        }
-        
-        return min(self.width, self.height)
-    }
-    
-    func scaledHeight(forImageSize imageSize: CGSize) -> CGFloat
-    {
-        return min(imageSize.height, self.height)
-    }
-}
-
 // Helper function inserted by Swift 4.2 migrator.
 fileprivate func convertToOptionalCIContextOptionDictionary(_ input: [String: Any]?) -> [CIContextOption: Any]? {
 	guard let input = input else { return nil }
@@ -485,5 +434,4 @@ fileprivate func convertFromCIRAWFilterOption(_ input: CIRAWFilterOption) -> Str
 }
 
 extension CGColorSpace: Hashable {
-    
 }

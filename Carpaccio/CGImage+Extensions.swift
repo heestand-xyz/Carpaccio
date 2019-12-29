@@ -8,18 +8,60 @@
 
 import CoreGraphics
 
-public enum CGImageExtensionError: Swift.Error {
-    case failedToConvertColorSpace
+public enum CGImageExtensionError: LocalizedError {
+    case failedToLoadCGImage
+    case failedToOpenCGImage(url: URL)
     case failedToDecodePNGData
     case failedToEncodeAsPNGData
+    case failedToConvertColorSpace
+
+    public var errorDescription: String? {
+        switch self {
+        case .failedToOpenCGImage(let url):
+            // TODO: Include to underlying CGImage error
+            return "Failed to open image at \(url)"
+        case .failedToLoadCGImage:
+            // TODO: Include to underlying CGImage error
+            return "Failed to load image"
+        case .failedToDecodePNGData:
+            return "Failed to decode PNG image data"
+        case .failedToEncodeAsPNGData:
+            return "Failed to encode PNG image data"
+        case .failedToConvertColorSpace:
+            return "Failed to convert image color space"
+        }
+    }
 }
 
 public extension CGImage {
-    func convertedToColorSpace(_ colorSpace: CGColorSpace) throws -> CGImage {
-        guard let convertedImage = self.copy(colorSpace: colorSpace) else {
-            throw CGImageExtensionError.failedToConvertColorSpace
+    static func loadCGImage(from source: CGImageSource, constrainingToSize size: CGSize? = nil, decodingFullImage decodeFullImage: Bool = false) throws -> CGImage {
+        var options: [String: AnyObject] = [String(kCGImageSourceCreateThumbnailWithTransform): kCFBooleanTrue,
+                                            String(decodeFullImage ? kCGImageSourceCreateThumbnailFromImageAlways : kCGImageSourceCreateThumbnailFromImageIfAbsent): kCFBooleanTrue]
+
+        print("Whaaaat.")
+
+        if let sz = size {
+            let c = sz.maximumPixelSizeConstraint
+            let px = NSNumber(value: Int(round(c)))
+            options[String(kCGImageSourceThumbnailMaxPixelSize)] = px
         }
-        return convertedImage
+
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary?) else {
+            throw CGImageExtensionError.failedToLoadCGImage
+        }
+        return cgImage
+
+    }
+
+    static func loadCGImage(from url: URL, constrainingToSize size: CGSize? = nil, decodingFullImage: Bool = false) throws -> CGImage {
+        let options = [String(kCGImageSourceShouldCache): false,
+                       String(kCGImageSourceShouldAllowFloat): true] as NSDictionary as CFDictionary
+
+        guard let source: CGImageSource = CGImageSourceCreateWithURL(url as CFURL, options) else {
+            throw CGImageExtensionError.failedToOpenCGImage(url: url)
+        }
+
+        return try loadCGImage(from: source, constrainingToSize: size, decodingFullImage: decodingFullImage)
     }
 
     static func cgImageFromPNGData(_ pngData: Data) throws -> CGImage {
@@ -46,5 +88,12 @@ public extension CGImage {
 
         let pngData = mutableData as Data
         return pngData
+    }
+
+    func convertedToColorSpace(_ colorSpace: CGColorSpace) throws -> CGImage {
+        guard let convertedImage = self.copy(colorSpace: colorSpace) else {
+            throw CGImageExtensionError.failedToConvertColorSpace
+        }
+        return convertedImage
     }
 }

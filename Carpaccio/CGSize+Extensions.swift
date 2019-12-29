@@ -19,7 +19,60 @@ public extension CGSize {
         }
         return self.width / self.height
     }
-    
+
+    init(constrainWidth w: CGFloat) {
+        self.init(width: w, height: CGFloat.infinity)
+    }
+
+    init(constrainHeight h: CGFloat) {
+        self.init(width: CGFloat.infinity, height: h)
+    }
+
+    /**
+     Assuming this CGSize value describes desired maximum width and/or height of a scaled output image,
+     return an the value for the `kCGImageSourceThumbnailMaxPixelSize` option so that an image gets scaled
+     down proportionally, if appropriate.
+     */
+    func maximumPixelSize(forImageSize imageSize: CGSize) -> CGFloat {
+        let widthIsUnconstrained = self.width >= imageSize.width
+        let heightIsUnconstrained = self.height >= imageSize.height
+        let ratio = imageSize.aspectRatio
+
+        if widthIsUnconstrained && heightIsUnconstrained {
+            if ratio > 1.0 {
+                return imageSize.width
+            }
+            return imageSize.height
+        }
+        else if widthIsUnconstrained {
+            if ratio > 1.0 {
+                return imageSize.proportionalWidth(forHeight: self.height)
+            }
+            return self.height
+        }
+        else if heightIsUnconstrained {
+            if ratio > 1.0 {
+                return self.width
+            }
+            return imageSize.proportionalHeight(forWidth: self.width)
+        }
+        return min(self.width, self.height)
+    }
+
+    var maximumPixelSizeConstraint: CGFloat {
+        if width >= 1.0 && width != CGFloat.infinity {
+            return width
+        }
+        if height >= 1.0 && height != CGFloat.infinity {
+            return height
+        }
+        return 1.0
+    }
+
+    func scaledHeight(forImageSize imageSize: CGSize) -> CGFloat {
+        return min(imageSize.height, self.height)
+    }
+
     func proportionalWidth(forHeight height: CGFloat) -> CGFloat {
         return height * self.aspectRatio
     }
@@ -44,18 +97,25 @@ public extension CGSize {
      this size's dimensions must be greater than or equal to the same dimension of `targetMaxSize`.
 
      Note that if a dimension of `targetMaxSize` is set to `CGFloat.infinity`, that particular axis will not be
-     considered. In such a case, _any_ value of this size, on that axis, is considered sufficient.
+     considered. In such a case, _any_ value of this size, on that axis, is considered insufficient. In other words,
+     a `targetMaxSize` of `CGSize(width: CGFloat.infinity, height: CGFloat.infinity)` will always return `false`.
 
      */
-    func isSufficientInAnyDimension(comparedTo targetMaxSize: CGSize, atMinimumRatio ratio: CGFloat = 1.0) -> Bool {
-        let widthIsSufficient = targetMaxSize.width == CGFloat.infinity || ((1.0 / ratio) * width) >= targetMaxSize.width
-        if widthIsSufficient {
-            return true
+    func isSufficientToFulfill(targetSize: CGSize, atMinimumRatio ratio: CGFloat = 1.0) -> Bool {
+        let considerWidth = targetSize.width >= 1.0 && targetSize.width != CGFloat.infinity
+        if considerWidth {
+            let widthIsSufficient = ((1.0 / ratio) * width) >= targetSize.width
+            if widthIsSufficient {
+                return true
+            }
         }
 
-        let heightIsSufficient = targetMaxSize.height == CGFloat.infinity || ((1.0 / ratio) * height) >= targetMaxSize.height
-        if heightIsSufficient {
-            return true
+        let considerHeight = targetSize.height >= 1.0 && targetSize.height != CGFloat.infinity
+        if considerHeight {
+            let heightIsSufficient = ((1.0 / ratio) * height) >= targetSize.height
+            if heightIsSufficient {
+                return true
+            }
         }
 
         return false
