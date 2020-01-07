@@ -87,8 +87,8 @@ public struct BitmapImageUtility {
         return NSImage(size: size)
     }
     
-    public static func image(cgImage: CGImage, size: CGSize) -> BitmapImage {
-        return NSImage(cgImage: cgImage, size: size)
+    public static func image(cgImage: CGImage, size: CGSize? = nil) -> BitmapImage {
+        return NSImage(cgImage: cgImage, size: size ?? .zero)
     }
     
     public static func image(ciImage image: CIImage) -> BitmapImage?

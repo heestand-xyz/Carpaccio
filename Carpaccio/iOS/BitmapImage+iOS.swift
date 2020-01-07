@@ -38,7 +38,7 @@ struct BitmapImageUtility {
         return image!
     }
     
-    static func image(cgImage: CGImage, size: CGSize) -> BitmapImage {
+    static func image(cgImage: CGImage, size: CGSize? = nil) -> BitmapImage {
         print("Please check correctness. Most likely this isn't OK as it was only done to get things to compile.")
         
         // this may or may not be wrong – OSX and iOS have a different way of creating an UIImage out of a CGImage:
@@ -46,7 +46,7 @@ struct BitmapImageUtility {
         // we don't for our purposes actually really need the arbitrary size behaviour.
         
         return UIImage(cgImage: cgImage,
-                       scale: size.width / CGFloat(cgImage.width),
+                       scale: size?.width ?? cgImage.width / CGFloat(cgImage.width),
                        orientation: UIImage.Orientation.up)
     }
     
