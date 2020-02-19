@@ -281,24 +281,22 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
             throw Error.urlMissing
         }
         
+        guard let loader = imageLoader(withColorSpace: colorSpace) else {
+            throw Error.noLoader(self)
+        }
+        
         let maxDimensions: CGSize? = {
             if let presentedHeight = presentedHeight {
                 return CGSize(constrainHeight: presentedHeight * scaleFactor)
             }
             return nil
         }()
-        
-        var options = FullSizedImageLoadingOptions()
-        options.maximumPixelDimensions = maxDimensions
-        
-        guard let loader = imageLoader(withColorSpace: colorSpace) else {
-            throw Error.noLoader(self)
-        }
-        
+
+        let options = FullSizedImageLoadingOptions(maximumPixelDimensions: maxDimensions)
         let image: BitmapImage, metadata: ImageMetadata
         do {
             // looks ugly but I couldn't find a neater way to destructure into existing local variables.
-            let (img, mdata) = try loader.loadFullSizeImage(options:options)
+            let (img, mdata) = try loader.loadFullSizeImage(options: options)
             image = img
             metadata = mdata
         }

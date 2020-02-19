@@ -109,17 +109,38 @@ public enum ImageLoadingError: Swift.Error, LocalizedError
 public typealias ImageLoadingErrorHandler = (_ error: ImageLoadingError) -> Void
 
 public struct FullSizedImageLoadingOptions {
-    public var maximumPixelDimensions: CGSize?
-    public var allowDraftMode = true
-    public var noiseReductionAmount = 0.5
-    public var colorNoiseReductionAmount = 1.0
-    public var noiseReductionSharpnessAmount = 0.5
-    public var noiseReductionContrastAmount = 0.5
-    public var boostShadowAmount = 1.0
-    public var enableVendorLensCorrection = true
-    
-    // for some reason compiler is not happy otherwise when this is used from outside.
-    public init() { }
+    public let maximumPixelDimensions: CGSize?
+
+    public let allowDraftMode: Bool
+    public let baselineExposure: Double?
+    public let noiseReductionAmount: Double
+    public let colorNoiseReductionAmount: Double
+    public let noiseReductionSharpnessAmount: Double
+    public let noiseReductionContrastAmount: Double
+    public let boostShadowAmount: Double
+    public let enableVendorLensCorrection: Bool
+
+    public init(
+        maximumPixelDimensions: CGSize? = nil,
+        allowDraftMode: Bool = true,
+        baselineExposure: Double? = nil,
+        noiseReductionAmount: Double = 0.5,
+        colorNoiseReductionAmount: Double = 1.0,
+        noiseReductionSharpnessAmount: Double = 0.5,
+        noiseReductionContrastAmount: Double = 0.5,
+        boostShadowAmount: Double = 5.0,
+        enableVendorLensCorrection: Bool = true
+    ) {
+        self.maximumPixelDimensions = maximumPixelDimensions
+        self.allowDraftMode = allowDraftMode
+        self.baselineExposure = baselineExposure
+        self.noiseReductionAmount = noiseReductionAmount
+        self.colorNoiseReductionAmount = colorNoiseReductionAmount
+        self.noiseReductionSharpnessAmount = noiseReductionSharpnessAmount
+        self.noiseReductionContrastAmount = noiseReductionContrastAmount
+        self.boostShadowAmount = boostShadowAmount
+        self.enableVendorLensCorrection = enableVendorLensCorrection
+    }
 }
 
 /**

@@ -357,63 +357,67 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
     public func loadFullSizeImage(options: FullSizedImageLoadingOptions) throws -> (BitmapImage, ImageMetadata)
     {
         let metadata = try loadImageMetadataIfNeeded()
-        let scaleFactor: Double
-        
-        if let sz = options.maximumPixelDimensions {
-            let imageSize = metadata.size
-            let height = sz.scaledHeight(forImageSize: imageSize)
-            scaleFactor = Double(height / imageSize.height)
+
+        let scale: Double = {
+            if let sz = options.maximumPixelDimensions {
+                let imageSize = metadata.size
+                let height = sz.scaledHeight(forImageSize: imageSize)
+                return Double(height / imageSize.height)
+            }
+            return 1.0
+        }()
+
+        let colorSpace = self.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
+        let image = try ImageLoader.loadFullSizeImage(at: imageURL, colorSpace: colorSpace, scale: scale, options: options)
+        return (image, metadata)
+    }
+
+    public static func loadFullSizeImage(at url: URL, colorSpace: CGColorSpace, scale: Double, options: FullSizedImageLoadingOptions) throws -> BitmapImage {
+        guard let RAWFilter = CIFilter(imageURL: url, options: nil) else {
+            throw ImageLoadingError.failedToInitializeDecoder(URL: url, message: "Failed to load full-size RAW image at \(url.path)")
         }
-        else {
-            scaleFactor = 1.0
-        }
-        
-        guard let RAWFilter = CIFilter(imageURL: self.imageURL, options: nil) else {
-            throw ImageLoadingError.failedToInitializeDecoder(URL: self.imageURL,
-                                                              message: "Failed to load full-size RAW image \(self.imageURL.path)")
-        }
-        
-        // NOTE: Having draft mode on appears to be crucial to performance, 
+
+        // NOTE: Having draft mode on appears to be crucial to performance,
         // with a difference of 0.3s vs. 2.5s per image on this iMac 5K, for instance.
-        // The quality is still quite excellent for displaying scaled-down presentations in a collection view, 
+        // The quality is still quite excellent for displaying scaled-down presentations in a collection view,
         // subjectively better than what you get from LibRAW with the half-size option.
         RAWFilter.setValue(true, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.allowDraftMode))
-        RAWFilter.setValue(scaleFactor, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.scaleFactor))
-        
+        RAWFilter.setValue(scale, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.scaleFactor))
+
+        if let value = options.baselineExposure {
+            RAWFilter.setValue(value, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.baselineExposure))
+        }
+
         RAWFilter.setValue(options.noiseReductionAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.noiseReductionAmount))
         RAWFilter.setValue(options.colorNoiseReductionAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.colorNoiseReductionAmount))
         RAWFilter.setValue(options.noiseReductionSharpnessAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.noiseReductionSharpnessAmount))
         RAWFilter.setValue(options.noiseReductionContrastAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.noiseReductionContrastAmount))
         RAWFilter.setValue(options.boostShadowAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.boostShadowAmount))
         RAWFilter.setValue(options.enableVendorLensCorrection, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.enableVendorLensCorrection))
-        
-        guard let image = RAWFilter.outputImage else {
-            throw ImageLoadingError.failedToDecode(URL: self.imageURL,
-                                                   message: "Failed to decode full-size RAW image \(self.imageURL.path)")
-        }
-        var bakedImage: BitmapImage? = nil
-        // Pixel format and color space set as discussed around 21:50 in https://developer.apple.com/videos/play/wwdc2016/505/
-        let colorSpace = self.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
-        let context = ImageLoader.bakingContextForImageAt(self.imageURL, usingColorSpace: colorSpace)
-        if let cgImage = context.createCGImage(image,
-                                               from: image.extent,
-                                               format: CIFormat.RGBA8,
-                                               colorSpace: colorSpace,
-                                               deferred: false) // The `deferred: false` argument is important, to ensure significant work will not be performed later on the main thread at drawing time
-        {
-            bakedImage = BitmapImageUtility.image(cgImage: cgImage, size: CGSize.zero)
-        }
-        
-        if bakedImage == nil {
-            bakedImage = BitmapImageUtility.image(ciImage: image)
-        }
-        
-        guard let nonNilNakedImage = bakedImage else {
-            throw ImageLoadingError.failedToLoadDecodedImage(URL: self.imageURL,
-                                                             message: "Failed to load decoded image \(self.imageURL.path)")
+
+        guard let ciImage = RAWFilter.outputImage else {
+            throw ImageLoadingError.failedToDecode(URL: url, message: "Failed to decode image at \(url.path)")
         }
 
-        return (nonNilNakedImage, metadata)
+        let bitmapImage: BitmapImage = {
+            // Pixel format and color space set as discussed around 21:50 in https://developer.apple.com/videos/play/wwdc2016/505/
+            let context = ImageLoader.bakingContextForImageAt(url, usingColorSpace: colorSpace)
+            if let cgImage = context.createCGImage(ciImage,
+                                                   from: ciImage.extent,
+                                                   format: CIFormat.RGBA8,
+                                                   colorSpace: colorSpace,
+                                                   deferred: false // The `deferred: false` argument is important, to ensure significant work will not be performed later, at drawing time, on the main thread
+                ) {
+                return BitmapImageUtility.image(cgImage: cgImage, size: CGSize.zero)
+            }
+            if let image = BitmapImageUtility.image(ciImage: ciImage) {
+                return image
+            }
+            assertionFailure() // Do ^this right
+            return BitmapImageUtility.image(sized: .zero)
+        }()
+
+        return bitmapImage
     }
 }
 
