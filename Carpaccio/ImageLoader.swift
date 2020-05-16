@@ -335,89 +335,78 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
         let colorSpace: CGColorSpace
     }
     
-    private static var _imageBakingContexts = [BakingContextKey: CIContext]()
+    private static var imageBakingContextsByColorSpace = [CGColorSpace: CIContext]()
     
-    private static func bakingContextForImageAt(_ imageURL: URL, usingColorSpace colorSpace: CGColorSpace) -> CIContext {
-        let key = BakingContextKey(pathExtension: imageURL.pathExtension, colorSpace: colorSpace)
-        
-        if let context = _imageBakingContexts[key] {
+    fileprivate static func imageBakingContext(for colorSpace: CGColorSpace) -> CIContext {
+        if let context = imageBakingContextsByColorSpace[colorSpace] {
             return context
         }
         
         let context = CIContext(options: convertToOptionalCIContextOptionDictionary([
             convertFromCIContextOption(CIContextOption.cacheIntermediates): false,
+            convertFromCIContextOption(CIContextOption.priorityRequestLow): false,
             convertFromCIContextOption(CIContextOption.useSoftwareRenderer): false,
             convertFromCIContextOption(CIContextOption.outputColorSpace): colorSpace
-            ]))
-        _imageBakingContexts[key] = context
-        
+        ]))
+
+        imageBakingContextsByColorSpace[colorSpace] = context
         return context
     }
     
-    public func loadFullSizeImage(options: FullSizedImageLoadingOptions) throws -> (BitmapImage, ImageMetadata)
-    {
+    public func loadFullSizeImage(options: ImageLoadingOptions) throws -> (BitmapImage, ImageMetadata) {
         let metadata = try loadImageMetadataIfNeeded()
+        let ciImage = try ImageLoader.loadCIImage(at: imageURL, imageMetadata: metadata, options: options)
 
-        let scale: Double = {
-            if let sz = options.maximumPixelDimensions {
-                let imageSize = metadata.size
-                let height = sz.scaledHeight(forImageSize: imageSize)
-                return Double(height / imageSize.height)
-            }
-            return 1.0
-        }()
+        guard let bitmapImage = ciImage.bitmapImage(using: colorSpace) else {
+            throw ImageLoadingError.failedToLoadDecodedImage(URL: imageURL, message: "Failed to make adjustable CIImage into a bitmap image")
+        }
 
-        let colorSpace = self.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
-        let image = try ImageLoader.loadFullSizeImage(at: imageURL, colorSpace: colorSpace, scale: scale, options: options)
-        return (image, metadata)
+        return (bitmapImage, metadata)
     }
 
-    public static func loadFullSizeImage(at url: URL, colorSpace: CGColorSpace, scale: Double, options: FullSizedImageLoadingOptions) throws -> BitmapImage {
-        guard let RAWFilter = CIFilter(imageURL: url, options: nil) else {
+    public func loadEditableImage(options: ImageLoadingOptions, cancelled: CancellationChecker?) throws -> (CIImage, ImageMetadata) {
+        let metadata = try loadImageMetadataIfNeeded()
+        try stopIfCancelled(cancelled, "Before loading editable image")
+        let ciImage = try ImageLoader.loadCIImage(at: imageURL, imageMetadata: metadata, options: options)
+        return (ciImage, metadata)
+    }
+
+    public static func loadCIImage(at url: URL, imageMetadata: ImageMetadata?, options: ImageLoadingOptions) throws -> CIImage {
+        guard let rawFilter = CIFilter(imageURL: url, options: nil) else {
             throw ImageLoadingError.failedToInitializeDecoder(URL: url, message: "Failed to load full-size RAW image at \(url.path)")
         }
+
+        let scale: Double = {
+            guard let targetSize = options.maximumPixelDimensions, let metadata = imageMetadata else {
+                return 1.0
+            }
+            let height = targetSize.scaledHeight(forImageSize: metadata.size)
+            return Double(height / metadata.size.height)
+        }()
 
         // NOTE: Having draft mode on appears to be crucial to performance,
         // with a difference of 0.3s vs. 2.5s per image on this iMac 5K, for instance.
         // The quality is still quite excellent for displaying scaled-down presentations in a collection view,
         // subjectively better than what you get from LibRAW with the half-size option.
-        RAWFilter.setValue(true, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.allowDraftMode))
-        RAWFilter.setValue(scale, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.scaleFactor))
+        rawFilter.setValue(true, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.allowDraftMode))
+        rawFilter.setValue(scale, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.scaleFactor))
 
         if let value = options.baselineExposure {
-            RAWFilter.setValue(value, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.baselineExposure))
+            rawFilter.setValue(value, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.baselineExposure))
         }
 
-        RAWFilter.setValue(options.noiseReductionAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.noiseReductionAmount))
-        RAWFilter.setValue(options.colorNoiseReductionAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.colorNoiseReductionAmount))
-        RAWFilter.setValue(options.noiseReductionSharpnessAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.noiseReductionSharpnessAmount))
-        RAWFilter.setValue(options.noiseReductionContrastAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.noiseReductionContrastAmount))
-        RAWFilter.setValue(options.boostShadowAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.boostShadowAmount))
-        RAWFilter.setValue(options.enableVendorLensCorrection, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.enableVendorLensCorrection))
+        rawFilter.setValue(options.noiseReductionAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.noiseReductionAmount))
+        rawFilter.setValue(options.colorNoiseReductionAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.colorNoiseReductionAmount))
+        rawFilter.setValue(options.noiseReductionSharpnessAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.noiseReductionSharpnessAmount))
+        rawFilter.setValue(options.noiseReductionContrastAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.noiseReductionContrastAmount))
+        rawFilter.setValue(options.boostShadowAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.boostShadowAmount))
+        rawFilter.setValue(options.enableVendorLensCorrection, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.enableVendorLensCorrection))
 
-        guard let ciImage = RAWFilter.outputImage else {
+        guard let rawImage = rawFilter.outputImage else {
             throw ImageLoadingError.failedToDecode(URL: url, message: "Failed to decode image at \(url.path)")
         }
 
-        let bitmapImage: BitmapImage = {
-            // Pixel format and color space set as discussed around 21:50 in https://developer.apple.com/videos/play/wwdc2016/505/
-            let context = ImageLoader.bakingContextForImageAt(url, usingColorSpace: colorSpace)
-            if let cgImage = context.createCGImage(ciImage,
-                                                   from: ciImage.extent,
-                                                   format: CIFormat.RGBA8,
-                                                   colorSpace: colorSpace,
-                                                   deferred: false // The `deferred: false` argument is important, to ensure significant work will not be performed later, at drawing time, on the main thread
-                ) {
-                return BitmapImageUtility.image(cgImage: cgImage, size: CGSize.zero)
-            }
-            if let image = BitmapImageUtility.image(ciImage: ciImage) {
-                return image
-            }
-            assertionFailure() // Do ^this right
-            return BitmapImageUtility.image(sized: .zero)
-        }()
-
-        return bitmapImage
+        return rawImage
     }
 }
 
@@ -434,8 +423,28 @@ fileprivate func convertFromCIContextOption(_ input: CIContextOption) -> String 
 
 // Helper function inserted by Swift 4.2 migrator.
 fileprivate func convertFromCIRAWFilterOption(_ input: CIRAWFilterOption) -> String {
-	return input.rawValue
+    return input.rawValue
 }
 
 extension CGColorSpace: Hashable {
+}
+
+public extension CIImage {
+    func bitmapImage(using requestedColorSpace: CGColorSpace? = nil) -> BitmapImage? {
+        let colorSpace = requestedColorSpace ?? CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!
+        let context = ImageLoader.imageBakingContext(for: colorSpace)
+
+        //
+        // Pixel format and color space set as discussed around 21:50 in:
+        //
+        //   https://developer.apple.com/videos/play/wwdc2016/505/
+        //
+        // The `deferred: false` argument is important, to ensure significant rendering work will not
+        // be performed later _at drawing time_ on the main thread.
+        //
+        if let cgImage = context.createCGImage(self, from: extent, format: CIFormat.RGBAf, colorSpace: colorSpace, deferred: false) {
+            return BitmapImageUtility.image(cgImage: cgImage, size: CGSize.zero)
+        }
+        return BitmapImageUtility.image(ciImage: self)
+    }
 }

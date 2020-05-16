@@ -108,7 +108,7 @@ public enum ImageLoadingError: Swift.Error, LocalizedError
 
 public typealias ImageLoadingErrorHandler = (_ error: ImageLoadingError) -> Void
 
-public struct FullSizedImageLoadingOptions {
+public struct ImageLoadingOptions {
     public let maximumPixelDimensions: CGSize?
 
     public let allowDraftMode: Bool
@@ -170,8 +170,7 @@ public enum ImageLoaderMetadataState {
  */
 public typealias CancellationChecker = () -> Bool
 
-public protocol ImageLoaderProtocol
-{
+public protocol ImageLoaderProtocol {
     var imageURL: URL { get }
     var imageMetadataState: ImageLoaderMetadataState { get }
     var colorSpace: CGColorSpace? { get }
@@ -198,10 +197,12 @@ public protocol ImageLoaderProtocol
     func loadThumbnailImage(cancelled: CancellationChecker?) throws -> (BitmapImage, ImageMetadata)
     
     /** Load full-size image. */
-    func loadFullSizeImage(options: FullSizedImageLoadingOptions) throws -> (BitmapImage, ImageMetadata)
+    func loadFullSizeImage(options: ImageLoadingOptions) throws -> (BitmapImage, ImageMetadata)
     
     /** Load full-size image with default options. */
     func loadFullSizeImage() throws -> (BitmapImage, ImageMetadata)
+
+    func loadEditableImage(options: ImageLoadingOptions, cancelled: CancellationChecker?) throws -> (CIImage, ImageMetadata)
 }
 
 public protocol URLBackedImageLoaderProtocol: ImageLoaderProtocol {
@@ -223,7 +224,7 @@ public extension ImageLoaderProtocol {
     }
     
     func loadFullSizeImage() throws -> (BitmapImage, ImageMetadata) {
-        return try self.loadFullSizeImage(options: FullSizedImageLoadingOptions())
+        return try self.loadFullSizeImage(options: ImageLoadingOptions())
     }
 
     /**

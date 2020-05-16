@@ -198,7 +198,9 @@
 				5F020A161D7B334A004C1DE6 /* Carpaccio-iOS-Info.plist */,
 				5F020A311D7B4C09004C1DE6 /* CarpaccioTests-iOS-Info.plist */,
 			);
+			indentWidth = 4;
 			sourceTree = "<group>";
+			tabWidth = 4;
 		};
 		5F1E227E1CDEA9D90083FD6F /* Products */ = {
 			isa = PBXGroup;

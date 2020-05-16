@@ -53,8 +53,10 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
     }
     
     public let name: String
-    public var thumbnailImage: BitmapImage? = nil
+
+    public var thumbnailImage: BitmapImage?
     public var fullImage: BitmapImage?
+    public var editableImage: CIImage?
 
     public var size: CGSize {
         guard let size = self.metadata?.size else {
@@ -292,7 +294,7 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
             return nil
         }()
 
-        let options = FullSizedImageLoadingOptions(maximumPixelDimensions: maxDimensions)
+        let options = ImageLoadingOptions(maximumPixelDimensions: maxDimensions)
         let image: BitmapImage, metadata: ImageMetadata
         do {
             // looks ugly but I couldn't find a neater way to destructure into existing local variables.
@@ -314,7 +316,47 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
         
         return image
     }
-    
+
+    public func fetchEditableImage(
+        presentedHeight: CGFloat? = nil,
+        store: Bool = false,
+        scaleFactor: CGFloat = 2.0,
+        colorSpace: CGColorSpace?,
+        cancelled: CancellationChecker?) throws -> CIImage
+    {
+        guard self.URL != nil else {
+            throw Error.urlMissing
+        }
+        guard let loader = imageLoader(withColorSpace: colorSpace) else {
+            throw Error.noLoader(self)
+        }
+
+        let maxDimensions: CGSize? = {
+            if let presentedHeight = presentedHeight {
+                return CGSize(constrainHeight: presentedHeight * scaleFactor)
+            }
+            return nil
+        }()
+
+        let options = ImageLoadingOptions(maximumPixelDimensions: maxDimensions)
+        let (ciImage, metadata): (CIImage, ImageMetadata) = try {
+            do {
+                return try loader.loadEditableImage(options: options, cancelled: cancelled)
+            } catch {
+                throw Error.loadingFailed(underlyingError: error)
+            }
+        }()
+
+        if self.metadata == nil {
+            self.metadata = metadata
+        }
+        if store {
+            self.editableImage = ciImage
+        }
+
+        return ciImage
+    }
+
     public static var imageFileExtensions: Set<String> = {
         var extensions = Image.RAWImageFileExtensions
         extensions.formUnion(Image.bakedImageFileExtensions)
