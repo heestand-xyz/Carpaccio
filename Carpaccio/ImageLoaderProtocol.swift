@@ -128,7 +128,7 @@ public struct ImageLoadingOptions {
         colorNoiseReductionAmount: Double = 1.0,
         noiseReductionSharpnessAmount: Double = 0.5,
         noiseReductionContrastAmount: Double = 0.5,
-        boostShadowAmount: Double = 5.0,
+        boostShadowAmount: Double = 2.0,
         enableVendorLensCorrection: Bool = true
     ) {
         self.maximumPixelDimensions = maximumPixelDimensions

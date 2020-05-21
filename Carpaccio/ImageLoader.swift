@@ -346,6 +346,8 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
             convertFromCIContextOption(CIContextOption.cacheIntermediates): false,
             convertFromCIContextOption(CIContextOption.priorityRequestLow): false,
             convertFromCIContextOption(CIContextOption.useSoftwareRenderer): false,
+            convertFromCIContextOption(CIContextOption.workingColorSpace): CGColorSpace.extendedLinearSRGB,
+            convertFromCIContextOption(CIContextOption.workingFormat): CIFormat.RGBAh,
             convertFromCIContextOption(CIContextOption.outputColorSpace): colorSpace
         ]))
 
@@ -442,7 +444,7 @@ public extension CIImage {
         // The `deferred: false` argument is important, to ensure significant rendering work will not
         // be performed later _at drawing time_ on the main thread.
         //
-        if let cgImage = context.createCGImage(self, from: extent, format: CIFormat.RGBAf, colorSpace: colorSpace, deferred: false) {
+        if let cgImage = context.createCGImage(self, from: extent, format: CIFormat.RGBAh, colorSpace: colorSpace, deferred: false) {
             return BitmapImageUtility.image(cgImage: cgImage, size: CGSize.zero)
         }
         return BitmapImageUtility.image(ciImage: self)
