@@ -214,16 +214,23 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
         // Load thumbnail
         try stopIfCancelled(cancelChecker, "Before loading thumbnail image")
 
-        let size = metadata.size
-        let maxPixelSize = maximumSize?.maximumPixelSize(forImageSize: size)
         let createFromFullImage = thumbnailScheme == .alwaysDecodeFullImage
-        
-        var options: [String: AnyObject] = [String(kCGImageSourceCreateThumbnailWithTransform): kCFBooleanTrue,
-                                            String(createFromFullImage ? kCGImageSourceCreateThumbnailFromImageAlways : kCGImageSourceCreateThumbnailFromImageIfAbsent): kCFBooleanTrue]
-        
-        if let sz = maxPixelSize {
-            options[String(kCGImageSourceThumbnailMaxPixelSize)] = NSNumber(value: Int(round(sz)))
-        }
+
+        var options: [String: AnyObject] = {
+            var options: [String: AnyObject] = [String(kCGImageSourceCreateThumbnailWithTransform): kCFBooleanTrue]
+
+            if createFromFullImage {
+                options[String(kCGImageSourceCreateThumbnailFromImageAlways)] = kCFBooleanTrue
+            } else {
+                options[String(kCGImageSourceCreateThumbnailFromImageIfAbsent)] = kCFBooleanTrue
+            }
+
+            if let maximumPixelDimension = maximumSize?.maximumPixelSize(forImageSize: metadata.size) {
+                options[String(kCGImageSourceThumbnailMaxPixelSize)] = NSNumber(value: maximumPixelDimension)
+            }
+
+            return options
+        }()
         
         let thumbnailImage: CGImage = try {
             let thumbnailCandidate = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary?)
@@ -231,7 +238,7 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
             // Retry from full image, if needed, and wasn't already
             guard let thumbnail: CGImage = {
                 if !createFromFullImage && thumbnailScheme.shouldLoadFullSizeImage(having: thumbnailCandidate, desiredMaximumPixelDimensions: maximumSize, ratio: 1.0) {
-                    options[kCGImageSourceCreateThumbnailFromImageAlways as String] = NSNumber(booleanLiteral: true)
+                    options[kCGImageSourceCreateThumbnailFromImageAlways as String] = kCFBooleanTrue
                     return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary?)
                 }
                 return thumbnailCandidate
@@ -342,14 +349,14 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
             return context
         }
         
-        let context = CIContext(options: convertToOptionalCIContextOptionDictionary([
-            convertFromCIContextOption(CIContextOption.cacheIntermediates): false,
-            convertFromCIContextOption(CIContextOption.priorityRequestLow): false,
-            convertFromCIContextOption(CIContextOption.useSoftwareRenderer): false,
-            convertFromCIContextOption(CIContextOption.workingColorSpace): CGColorSpace.extendedLinearSRGB,
-            convertFromCIContextOption(CIContextOption.workingFormat): CIFormat.RGBAh,
-            convertFromCIContextOption(CIContextOption.outputColorSpace): colorSpace
-        ]))
+        let context = CIContext(options: [
+            CIContextOption.cacheIntermediates: false,
+            CIContextOption.priorityRequestLow: false,
+            CIContextOption.useSoftwareRenderer: false,
+            CIContextOption.workingColorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!,
+            CIContextOption.workingFormat: CIFormat.RGBAh,
+            CIContextOption.outputColorSpace: colorSpace
+        ])
 
         imageBakingContextsByColorSpace[colorSpace] = context
         return context
@@ -390,19 +397,19 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
         // with a difference of 0.3s vs. 2.5s per image on this iMac 5K, for instance.
         // The quality is still quite excellent for displaying scaled-down presentations in a collection view,
         // subjectively better than what you get from LibRAW with the half-size option.
-        rawFilter.setValue(true, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.allowDraftMode))
-        rawFilter.setValue(scale, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.scaleFactor))
+        rawFilter.setValue(true, forKey: CIRAWFilterOption.allowDraftMode.rawValue)
+        rawFilter.setValue(scale, forKey: CIRAWFilterOption.scaleFactor.rawValue)
 
         if let value = options.baselineExposure {
-            rawFilter.setValue(value, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.baselineExposure))
+            rawFilter.setValue(value, forKey: CIRAWFilterOption.baselineExposure.rawValue)
         }
 
-        rawFilter.setValue(options.noiseReductionAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.noiseReductionAmount))
-        rawFilter.setValue(options.colorNoiseReductionAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.colorNoiseReductionAmount))
-        rawFilter.setValue(options.noiseReductionSharpnessAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.noiseReductionSharpnessAmount))
-        rawFilter.setValue(options.noiseReductionContrastAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.noiseReductionContrastAmount))
-        rawFilter.setValue(options.boostShadowAmount, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.boostShadowAmount))
-        rawFilter.setValue(options.enableVendorLensCorrection, forKey: convertFromCIRAWFilterOption(CIRAWFilterOption.enableVendorLensCorrection))
+        rawFilter.setValue(options.noiseReductionAmount, forKey: CIRAWFilterOption.noiseReductionAmount.rawValue)
+        rawFilter.setValue(options.colorNoiseReductionAmount, forKey: CIRAWFilterOption.colorNoiseReductionAmount.rawValue)
+        rawFilter.setValue(options.noiseReductionSharpnessAmount, forKey: CIRAWFilterOption.noiseReductionSharpnessAmount.rawValue)
+        rawFilter.setValue(options.noiseReductionContrastAmount, forKey: CIRAWFilterOption.noiseReductionContrastAmount.rawValue)
+        rawFilter.setValue(options.boostShadowAmount, forKey: CIRAWFilterOption.boostShadowAmount.rawValue)
+        rawFilter.setValue(options.enableVendorLensCorrection, forKey: CIRAWFilterOption.enableVendorLensCorrection.rawValue)
 
         guard let rawImage = rawFilter.outputImage else {
             throw ImageLoadingError.failedToDecode(URL: url, message: "Failed to decode image at \(url.path)")
@@ -410,22 +417,6 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
 
         return rawImage
     }
-}
-
-// Helper function inserted by Swift 4.2 migrator.
-fileprivate func convertToOptionalCIContextOptionDictionary(_ input: [String: Any]?) -> [CIContextOption: Any]? {
-	guard let input = input else { return nil }
-	return Dictionary(uniqueKeysWithValues: input.map { key, value in (CIContextOption(rawValue: key), value)})
-}
-
-// Helper function inserted by Swift 4.2 migrator.
-fileprivate func convertFromCIContextOption(_ input: CIContextOption) -> String {
-	return input.rawValue
-}
-
-// Helper function inserted by Swift 4.2 migrator.
-fileprivate func convertFromCIRAWFilterOption(_ input: CIRAWFilterOption) -> String {
-    return input.rawValue
 }
 
 extension CGColorSpace: Hashable {

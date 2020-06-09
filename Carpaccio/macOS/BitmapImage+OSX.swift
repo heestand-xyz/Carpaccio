@@ -91,27 +91,12 @@ public struct BitmapImageUtility {
         return NSImage(cgImage: cgImage, size: size ?? .zero)
     }
     
-    public static func image(ciImage image: CIImage) -> BitmapImage?
+    public static func image(ciImage: CIImage) -> BitmapImage?
     {
-        let size = image.extent.size
-        let bitmapImage = self.image(sized: size) as! NSImage
-        
-        // If source CIImage is less than one pixel in size, there's nothing to draw,
-        // and an exception is actually thrown by the lockFocus() call
-        if size.width * size.height >= 1.0 {
-            bitmapImage.cacheMode = .never
-            bitmapImage.lockFocus()
-            
-            guard let ciContext = NSGraphicsContext.current?.ciContext else {
-                bitmapImage.unlockFocus()
-                return nil
-            }
-            
-            ciContext.draw(image, in: image.extent, from: image.extent)
-            bitmapImage.unlockFocus()
-        }
-        
-        return bitmapImage
+        let nsImage = self.image(sized: ciImage.extent.size) as! NSImage
+        let rep = NSCIImageRep(ciImage: ciImage)
+        nsImage.addRepresentation(rep)
+        return nsImage
     }
 
     public static func image(_ overlay: BitmapImage, overlayedOn background: BitmapImage) -> NSImage {

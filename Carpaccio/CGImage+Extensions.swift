@@ -34,23 +34,25 @@ public enum CGImageExtensionError: LocalizedError {
 }
 
 public extension CGImage {
-    static func loadCGImage(from source: CGImageSource, constrainingToSize size: CGSize? = nil, decodingFullImage decodeFullImage: Bool = false) throws -> CGImage {
+    var size: CGSize {
+        return CGSize(width: width, height: height)
+    }
+
+    static func loadCGImage(from source: CGImageSource, constrainingToSize constrainedSize: CGSize? = nil, decodingFullImage decodeFullImage: Bool = false) throws -> CGImage {
         var options: [String: AnyObject] = [String(kCGImageSourceCreateThumbnailWithTransform): kCFBooleanTrue,
                                             String(decodeFullImage ? kCGImageSourceCreateThumbnailFromImageAlways : kCGImageSourceCreateThumbnailFromImageIfAbsent): kCFBooleanTrue]
 
-        print("Whaaaat.")
-
-        if let sz = size {
-            let c = sz.maximumPixelSizeConstraint
-            let px = NSNumber(value: Int(round(c)))
-            options[String(kCGImageSourceThumbnailMaxPixelSize)] = px
+        if let sz = constrainedSize {
+            let metadata = try ImageMetadata(imageSource: source)
+            let maximumPixelDimension = sz.maximumPixelSize(forImageSize: metadata.size)
+            options[String(kCGImageSourceThumbnailMaxPixelSize)] = NSNumber(value: maximumPixelDimension)
         }
 
         guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary?) else {
             throw CGImageExtensionError.failedToLoadCGImage
         }
-        return cgImage
 
+        return cgImage
     }
 
     static func loadCGImage(from url: URL, constrainingToSize size: CGSize? = nil, decodingFullImage: Bool = false) throws -> CGImage {

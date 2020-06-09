@@ -10,6 +10,22 @@ import Foundation
 import QuartzCore
 
 public extension CGSize {
+    init(constrainWidth w: CGFloat) {
+        self.init(width: w, height: CGFloat.infinity)
+    }
+
+    init(constrainHeight h: CGFloat) {
+        self.init(width: CGFloat.infinity, height: h)
+    }
+
+    static func * (size: CGSize, scale: CGFloat) -> CGSize {
+        CGSize(width: size.width * scale, height: size.height * scale)
+    }
+
+    static func * (scale: CGFloat, size: CGSize) -> CGSize {
+        size * scale
+    }
+
     var aspectRatio: CGFloat {
         if self.width == 0.0 {
             return 0.0
@@ -20,12 +36,14 @@ public extension CGSize {
         return self.width / self.height
     }
 
-    init(constrainWidth w: CGFloat) {
-        self.init(width: w, height: CGFloat.infinity)
-    }
-
-    init(constrainHeight h: CGFloat) {
-        self.init(width: CGFloat.infinity, height: h)
+    func proportionalSize(for imageSize: CGSize) -> CGSize {
+        let maximumDimension = CGFloat(maximumPixelSize(forImageSize: imageSize))
+        let ratio = imageSize.aspectRatio
+        if ratio > 1.0 {
+            return CGSize(width: maximumDimension, height: round(maximumDimension / ratio))
+        } else {
+            return CGSize(width: round(ratio * maximumDimension), height: maximumDimension)
+        }
     }
 
     /**
@@ -33,37 +51,43 @@ public extension CGSize {
      return an the value for the `kCGImageSourceThumbnailMaxPixelSize` option so that an image gets scaled
      down proportionally, if appropriate.
      */
-    func maximumPixelSize(forImageSize imageSize: CGSize) -> CGFloat {
+    func maximumPixelSize(forImageSize imageSize: CGSize) -> Int {
         let widthIsUnconstrained = self.width >= imageSize.width
         let heightIsUnconstrained = self.height >= imageSize.height
         let ratio = imageSize.aspectRatio
 
         if widthIsUnconstrained && heightIsUnconstrained {
             if ratio > 1.0 {
-                return imageSize.width
+                return Int(round(imageSize.width))
             }
-            return imageSize.height
-        }
-        else if widthIsUnconstrained {
+            return Int(round(imageSize.height))
+
+        } else if widthIsUnconstrained {
             if ratio > 1.0 {
-                return imageSize.proportionalWidth(forHeight: self.height)
+                return Int(round(imageSize.proportionalWidth(forHeight: self.height)))
             }
-            return self.height
-        }
-        else if heightIsUnconstrained {
+            return Int(round(self.height))
+
+        } else if heightIsUnconstrained {
             if ratio > 1.0 {
-                return self.width
+                return Int(round(self.width))
             }
-            return imageSize.proportionalHeight(forWidth: self.width)
+            return Int(round(imageSize.proportionalHeight(forWidth: self.width)))
         }
-        return min(self.width, self.height)
+
+        return Int(round(min(self.width, self.height)))
     }
 
     var maximumPixelSizeConstraint: CGFloat {
-        if width >= 1.0 && width != CGFloat.infinity {
+        let constrainWidth = width >= 1.0 && width != CGFloat.infinity
+        let constrainHeight = height >= 1.0 && height != CGFloat.infinity
+        if constrainWidth && constrainHeight {
+            return max(width, height)
+        }
+        if constrainWidth {
             return width
         }
-        if height >= 1.0 && height != CGFloat.infinity {
+        if constrainHeight {
             return height
         }
         return 1.0
