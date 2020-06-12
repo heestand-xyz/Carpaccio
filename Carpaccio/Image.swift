@@ -338,8 +338,7 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
             return nil
         }()
 
-        // In the image editing/adjustment context, draft mode doesn't quite cut it
-        let options = ImageLoadingOptions(maximumPixelDimensions: maxDimensions, allowDraftMode: false)
+        let options = ImageLoadingOptions(maximumPixelDimensions: maxDimensions)
 
         let (ciImage, metadata): (CIImage, ImageMetadata) = try {
             do {
