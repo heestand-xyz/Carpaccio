@@ -351,7 +351,7 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
         
         let context = CIContext(options: [
             CIContextOption.cacheIntermediates: false,
-            CIContextOption.priorityRequestLow: false,
+            CIContextOption.priorityRequestLow: true,
             CIContextOption.useSoftwareRenderer: false,
             CIContextOption.workingColorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!,
             CIContextOption.workingFormat: CIFormat.RGBAh,

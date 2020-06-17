@@ -38,12 +38,22 @@ public extension CGImage {
         return CGSize(width: width, height: height)
     }
 
-    static func loadCGImage(from source: CGImageSource, constrainingToSize constrainedSize: CGSize? = nil, decodingFullImage decodeFullImage: Bool = false) throws -> CGImage {
+    static func loadCGImage(
+        from source: CGImageSource,
+        metadata inputMetadata: ImageMetadata? = nil,
+        constrainingToSize constrainedSize: CGSize? = nil,
+        decodingFullImage decodeFullImage: Bool = false
+    ) throws -> CGImage {
         var options: [String: AnyObject] = [String(kCGImageSourceCreateThumbnailWithTransform): kCFBooleanTrue,
                                             String(decodeFullImage ? kCGImageSourceCreateThumbnailFromImageAlways : kCGImageSourceCreateThumbnailFromImageIfAbsent): kCFBooleanTrue]
 
         if let sz = constrainedSize {
-            let metadata = try ImageMetadata(imageSource: source)
+            let metadata: ImageMetadata = try {
+                if let metadata = inputMetadata {
+                    return metadata
+                }
+                return try ImageMetadata(imageSource: source)
+            }()
             let maximumPixelDimension = sz.maximumPixelSize(forImageSize: metadata.size)
             options[String(kCGImageSourceThumbnailMaxPixelSize)] = NSNumber(value: maximumPixelDimension)
         }
@@ -55,7 +65,7 @@ public extension CGImage {
         return cgImage
     }
 
-    static func loadCGImage(from url: URL, constrainingToSize size: CGSize? = nil, decodingFullImage: Bool = false) throws -> CGImage {
+    static func loadCGImage(from url: URL, metadata: ImageMetadata? = nil, constrainingToSize size: CGSize? = nil, decodingFullImage: Bool = false) throws -> CGImage {
         let options = [String(kCGImageSourceShouldCache): false,
                        String(kCGImageSourceShouldAllowFloat): true] as NSDictionary as CFDictionary
 
@@ -63,7 +73,7 @@ public extension CGImage {
             throw CGImageExtensionError.failedToOpenCGImage(url: url)
         }
 
-        return try loadCGImage(from: source, constrainingToSize: size, decodingFullImage: decodingFullImage)
+        return try loadCGImage(from: source, metadata: metadata, constrainingToSize: size, decodingFullImage: decodingFullImage)
     }
 
     static func cgImageFromPNGData(_ pngData: Data) throws -> CGImage {
