@@ -11,33 +11,21 @@ import Foundation
 import QuartzCore
 import ImageIO
 
-extension CGImagePropertyOrientation
-{
-    var dimensionsSwapped: Bool {
-        switch self
-        {
-        case .left, .right, .leftMirrored, .rightMirrored:
-            return true
-        default:
-            return false
-        }
-    }
-}
-
-public struct ImageMetadata
-{
+public struct ImageMetadata: Codable {
     // MARK: Required metadata
-    
+
     /** Width and height of the image. */
     public let nativeSize: CGSize
     
     /** Orientation of the image's pixel data. Default is `.up`. */
-    public let nativeOrientation: CGImagePropertyOrientation
+    public let nativeOrientation: ImageOrientation
     
     // MARK: Optional metadata
+
     public let cameraMaker: String?
     public let cameraModel: String?
-    public let colorSpace: CGColorSpace?
+
+    public let colorSpaceName: String?
     
     /** In common tog parlance, this'd be "aperture": f/2.8 etc.*/
     public let fNumber: Double?
@@ -65,17 +53,53 @@ public struct ImageMetadata
      However, neither Lightroom, Capture One, FastRawViewer nor RawRightAway display any more
      detail or timezone-awareness, so it seems like this needs to be accepted as just the way it
      is.
-    
-    */
+
+     */
     public let timestamp: Date?
-    
+
+    // Derived properties
+    public var colorSpace: CGColorSpace? {
+        guard let name = colorSpaceName else {
+            return nil
+        }
+        return CGColorSpace(name: name as CFString)
+    }
+
+    // Codable
+    public enum CodingKeys: String, CodingKey {
+        case nativeSize = "native-size"
+        case nativeOrientation = "native-orientation"
+        case cameraMaker = "camera-maker"
+        case cameraModel = "camera-model"
+        case colorSpaceName = "color-space"
+        case fNumber = "f-number"
+        case focalLength = "focal-length"
+        case focalLength35mmEquivalent = "focal-length-35mm-equivalent"
+        case iso
+        case shutterSpeed = "shutter-speed"
+        case timestamp
+    }
+
     // MARK: Initialisers
-    public init(nativeSize: CGSize, nativeOrientation: CGImagePropertyOrientation = .up, colorSpace: CGColorSpace? = nil, fNumber: Double? = nil, focalLength: Double? = nil, focalLength35mmEquivalent: Double? = nil, iso: Double? = nil, shutterSpeed: TimeInterval? = nil, cameraMaker: String? = nil, cameraModel: String? = nil, timestamp: Date? = nil)
-    {
+    public init(
+        nativeSize: CGSize,
+        nativeOrientation: ImageOrientation = .up,
+        colorSpaceName: String? = nil,
+        fNumber: Double? = nil,
+        focalLength: Double? = nil,
+        focalLength35mmEquivalent: Double? = nil,
+        iso: Double? = nil,
+        shutterSpeed: TimeInterval? = nil,
+        cameraMaker: String? = nil,
+        cameraModel: String? = nil,
+        timestamp: Date? = nil
+    ) {
         self.fNumber = fNumber
         self.cameraMaker = cameraMaker
         self.cameraModel = cameraModel
-        self.colorSpace = colorSpace
+
+        self.colorSpaceName = colorSpaceName
+
         self.focalLength = focalLength
         self.focalLength35mmEquivalent = focalLength35mmEquivalent
         self.iso = iso
@@ -85,9 +109,9 @@ public struct ImageMetadata
         self.timestamp = timestamp
     }
 
-    public static func cgColorSpaceNameForPictureStyleColorSpaceName(_ name: String) -> CFString? {
+    public static func cgColorSpaceNameForPictureStyleColorSpaceName(_ name: String) -> String? {
         if name == "Adobe RGB" {
-            return CGColorSpace.adobeRGB1998
+            return CGColorSpace.adobeRGB1998 as String
         }
         return nil
     }
@@ -106,18 +130,14 @@ public struct ImageMetadata
 
     public init(cgImagePropertiesDictionary properties: [AnyHashable: Any], imageSource: ImageIO.CGImageSource? = nil) throws {
         var fNumber: Double? = nil, focalLength: Double? = nil, focalLength35mm: Double? = nil, iso: Double? = nil, shutterSpeed: Double? = nil
-        var colorSpace: CGColorSpace? = nil
+        var colorSpaceName: String? = nil
         var width: CGFloat? = nil, height: CGFloat? = nil
         var timestamp: Date? = nil
         
         // Examine EXIF metadata
         if let exif = properties[kCGImagePropertyExifDictionary as String] as? [String: Any] {
             fNumber = (exif[kCGImagePropertyExifFNumber as String] as? NSNumber)?.doubleValue
-            
-            if let colorSpaceName = exif[kCGImagePropertyExifColorSpace as String] as? String {
-                colorSpace = CGColorSpace(name: colorSpaceName as CFString)
-            }
-            
+            colorSpaceName = exif[kCGImagePropertyExifColorSpace as String] as? String
             focalLength = (exif[kCGImagePropertyExifFocalLength as String] as? NSNumber)?.doubleValue
             focalLength35mm = (exif[kCGImagePropertyExifFocalLenIn35mmFilm as String] as? NSNumber)?.doubleValue
             
@@ -144,13 +164,15 @@ public struct ImageMetadata
         }
         
         // Examine TIFF metadata
-        var cameraMaker: String? = nil, cameraModel: String? = nil, orientation: CGImagePropertyOrientation? = nil
+        var cameraMaker: String? = nil, cameraModel: String? = nil, orientation: ImageOrientation? = nil
         
         if let tiff = properties[kCGImagePropertyTIFFDictionary as String] as? [String: Any]
         {
             cameraMaker = tiff[kCGImagePropertyTIFFMake as String] as? String
             cameraModel = tiff[kCGImagePropertyTIFFModel as String] as? String
-            orientation = CGImagePropertyOrientation(rawValue: (tiff[kCGImagePropertyTIFFOrientation as String] as? NSNumber)?.uint32Value ?? CGImagePropertyOrientation.up.rawValue)
+            if let cgOrientation = CGImagePropertyOrientation(rawValue: (tiff[kCGImagePropertyTIFFOrientation as String] as? NSNumber)?.uint32Value ?? CGImagePropertyOrientation.up.rawValue) {
+                orientation = ImageOrientation(cgImageOrientation: cgOrientation)
+            }
             
             if timestamp == nil, let dateTimeString = (tiff[kCGImagePropertyTIFFDateTime as String] as? String) {
                 timestamp = ImageMetadata.EXIFDateFormatter.date(from: dateTimeString)
@@ -163,13 +185,12 @@ public struct ImageMetadata
             width = properties["PixelWidth"] as? CGFloat
             height = properties["PixelHeight"] as? CGFloat
         }
-        if colorSpace == nil {
-            if let pictureStyleDictionary = properties["{PictureStyle}"] as? [String: Any],
-                let colorSpaceArray = pictureStyleDictionary["PictStyleColorSpace"] as? [Any],
-                let colorSpaceName = colorSpaceArray.first as? String,
-                let cgColorSpaceName = ImageMetadata.cgColorSpaceNameForPictureStyleColorSpaceName(colorSpaceName) {
 
-                colorSpace = CGColorSpace(name: cgColorSpaceName)
+        if colorSpaceName == nil {
+            if let pictureStyleDictionary = properties["{PictureStyle}"] as? [String: Any],
+                let names = pictureStyleDictionary["PictStyleColorSpace"] as? [Any],
+                let name = names.first as? String {
+                colorSpaceName = ImageMetadata.cgColorSpaceNameForPictureStyleColorSpaceName(name)
             }
         }
 
@@ -183,14 +204,14 @@ public struct ImageMetadata
             width = CGFloat(image.width)
             height = CGFloat(image.height)
         }
-        
+
         guard let validWidth = width, let validHeight = height else {
             throw Image.Error.invalidImageSize
         }
-        
-        self.init(nativeSize: CGSize(width: validWidth, height: validHeight), nativeOrientation: orientation ?? .up, colorSpace: colorSpace, fNumber: fNumber, focalLength: focalLength, focalLength35mmEquivalent: focalLength35mm, iso: iso, shutterSpeed: shutterSpeed, cameraMaker: cameraMaker, cameraModel: cameraModel, timestamp: timestamp)
+
+        self.init(nativeSize: CGSize(width: validWidth, height: validHeight), nativeOrientation: orientation ?? .up, colorSpaceName: colorSpaceName, fNumber: fNumber, focalLength: focalLength, focalLength35mmEquivalent: focalLength35mm, iso: iso, shutterSpeed: shutterSpeed, cameraMaker: cameraMaker, cameraModel: cameraModel, timestamp: timestamp)
     }
-    
+
     // See ImageMetadata.timestamp for known caveats about EXIF/TIFF
     // date metadata, as interpreted by this date formatter.
     private static let EXIFDateFormatter: DateFormatter = {
@@ -198,7 +219,7 @@ public struct ImageMetadata
         formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
         return formatter
     }()
-    
+
     // MARK: Derived properties
     public var size: CGSize
     {
@@ -207,12 +228,12 @@ public struct ImageMetadata
         }
         return nativeSize
     }
-    
+
     public enum Shape: String {
         case landscape
         case portrait
         case square
-        
+
         init(size: CGSize) {
             if size.width > size.height {
                 self = .landscape
@@ -223,147 +244,147 @@ public struct ImageMetadata
             }
         }
     }
-    
+
     public var shape: Shape {
         return Shape(size: size)
     }
-    
+
     public var cleanedUpCameraModel: String? {
         get {
             guard let model = self.cameraModel else {
                 return nil
             }
-            
+
             let cleanModel = model.replacingOccurrences(of: "NIKON", with: "Nikon")
             return cleanModel
         }
     }
-    
+
     public var humanReadableFNumber: String? {
         guard let f = fNumber, f > 0.0 else {
             return nil
         }
-        
+
         // Default to showing one decimal place...
         let oneTenthPrecisionfNumber = round(f * 10.0) / 10.0
         let integerAperture = Int(oneTenthPrecisionfNumber)
-        
+
         // ..but avoid displaying .0
         if oneTenthPrecisionfNumber == Double(integerAperture) {
             return "f/\(integerAperture)"
         }
-        
+
         return "f/\(oneTenthPrecisionfNumber)"
     }
-    
+
     public var humanReadableFocalLength: String? {
         guard let f = self.focalLength, f > 0.0 else {
             return nil
         }
-        
+
         let mm = Int(round(f))
         return "\(mm)mm"
     }
-    
+
     public var humanReadableFocalLength35mmEquivalent: String? {
         guard let f = self.focalLength35mmEquivalent, f > 0.0 else {
             return nil
         }
-        
+
         let mm = Int(round(f))
         return "(\(mm)mm)"
     }
-    
+
     public var humanReadableISO: String? {
         guard let iso = self.iso, iso > 0.0 else {
             return nil
         }
-        
+
         let integerISO = Int(round(iso))
         return "ISO \(integerISO)"
     }
-    
+
     public var humanReadableShutterSpeed: String? {
         guard let s = self.shutterSpeed, s > 0.0 else {
             return nil
         }
-        
+
         if s < 1.0
         {
             let dividend = Int(round(1.0 / s))
             return "1/\(dividend)"
         }
-        
+
         let oneTenthPrecisionSeconds = round(s * 10.0) / 10.0
         return "\(oneTenthPrecisionSeconds)s"
     }
-    
+
     public var dictionaryRepresentation: [String: Any] {
         var dict: [String: Any] = [String: Any]()
-        
+
         if let cameraMaker = self.cameraMaker {
             dict["cameraMaker"] = cameraMaker
         }
-        
+
         if let cameraModel = self.cameraModel {
             dict["cameraModel"] = cameraModel
         }
-        
+
         if let space = self.colorSpace, let spaceName = space.name {
             dict["colorSpace"] = spaceName
         }
-        
+
         if let fNumber = self.fNumber {
             dict["fNumber"] = fNumber
         }
-        
+
         if let focalLength = self.focalLength {
             dict["focalLength"] = focalLength
         }
-        
+
         if let focalLength35mmEquivalent = self.focalLength35mmEquivalent {
             dict["focalLength35mmEquivalent"] = focalLength35mmEquivalent
         }
-        
+
         if let iso = self.iso {
             dict["ISO"] = iso
         }
-        
+
         dict["nativeOrientation"] = nativeOrientation.rawValue
-        
+
         dict["nativeSize"] = [nativeSize.width, nativeSize.height]
-        
+
         dict["shape"] = shape.rawValue
-        
+
         if let shutterSpeed = self.shutterSpeed {
             dict["shutterSpeed"] = shutterSpeed
         }
-        
+
         if let timestamp = self.timestamp {
             dict["timestamp"] = timestamp.timeIntervalSince1970
         }
-        
+
         return dict
     }
-    
+
     private static var formatters: [DateFormatterStylePair: DateFormatter] = [:]
     private static func timestampFormatter(dateStyle: DateFormatter.Style, timeStyle: DateFormatter.Style) -> DateFormatter
     {
         let stylePair = DateFormatterStylePair(dateStyle: dateStyle, timeStyle: timeStyle)
-        
+
         if let existingFormatter = formatters[stylePair] {
             return existingFormatter
         }
-        
+
         let f = DateFormatter()
         f.dateStyle = dateStyle
         f.timeStyle = timeStyle
-        
+
         formatters[stylePair] = f
-        
+
         return f
     }
-    
+
     public func humanReadableTimestamp(dateStyle: DateFormatter.Style, timeStyle: DateFormatter.Style) -> String {
         if let t = timestamp {
             return ImageMetadata.timestampFormatter(dateStyle: dateStyle,
@@ -371,18 +392,80 @@ public struct ImageMetadata
         }
         return ""
     }
-    
+
     public enum SummaryStyle {
         case short
         case medium
     }
-    
+
     public func humanReadableSummary(style: SummaryStyle) -> String {
         return "\(style == .medium ? padTail(ofString:self.cleanedUpCameraModel) : "")\(padTail(ofString: self.humanReadableFocalLength))\(padTail(ofString: conditional(string: self.humanReadableFocalLength35mmEquivalent, condition: (self.focalLength35mmEquivalent != self.focalLength))))\(padTail(ofString: self.humanReadableFNumber))\(padTail(ofString: self.humanReadableShutterSpeed))\(padTail(ofString: self.humanReadableISO))"
     }
-    
+
     public var humanReadableNativeSize: String {
         return "\(Int(self.nativeSize.width))x\(Int(self.nativeSize.height))"
+    }
+}
+
+public enum ImageOrientation: String, Codable {
+    case up = "up"
+    case upMirrored = "up-mirrored"
+    case down = "down"
+    case downMirrored = "down-mirrored"
+    case leftMirrored = "left-mirrored"
+    case right = "right"
+    case rightMirrored = "right-mirrored"
+    case left = "left"
+    
+    init(cgImageOrientation: CGImagePropertyOrientation) {
+        switch cgImageOrientation {
+        case .up:
+            self = .up
+        case .upMirrored:
+            self = .upMirrored
+        case .down:
+            self = .down
+        case .downMirrored:
+            self = .downMirrored
+        case .leftMirrored:
+            self = .leftMirrored
+        case .right:
+            self = .right
+        case .rightMirrored:
+            self = .rightMirrored
+        case .left:
+            self = .left
+        }
+    }
+    
+    public var cgImageOrientation: CGImagePropertyOrientation {
+        switch self {
+        case .up:
+            return .up
+        case .upMirrored:
+            return .upMirrored
+        case .down:
+            return .down
+        case .downMirrored:
+            return .downMirrored
+        case .leftMirrored:
+            return .leftMirrored
+        case .right:
+            return .right
+        case .rightMirrored:
+            return .rightMirrored
+        case .left:
+            return .left
+        }
+    }
+
+    var dimensionsSwapped: Bool {
+        switch self {
+        case .left, .right, .leftMirrored, .rightMirrored:
+            return true
+        default:
+            return false
+        }
     }
 }
 

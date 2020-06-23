@@ -126,8 +126,7 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
     
     private func imageSource() throws -> CGImageSource {
         // We intentionally don't store the image source, to not gob up resources, but rather open it anew each time
-        let options = [String(kCGImageSourceShouldCache): false,
-                       String(kCGImageSourceShouldAllowFloat): true] as NSDictionary as CFDictionary
+        let options = [kCGImageSourceShouldCache: false] as CFDictionary
         
         guard let imageSource = CGImageSourceCreateWithURL(imageURL as CFURL, options) else{
             throw CGImageExtensionError.failedToOpenCGImage(url: imageURL)
@@ -217,7 +216,11 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
         let createFromFullImage = thumbnailScheme == .alwaysDecodeFullImage
 
         var options: [String: AnyObject] = {
-            var options: [String: AnyObject] = [String(kCGImageSourceCreateThumbnailWithTransform): kCFBooleanTrue]
+            var options: [String: AnyObject] = [
+                String(kCGImageSourceCreateThumbnailWithTransform): kCFBooleanTrue,
+                String(kCGImageSourceShouldCacheImmediately): kCFBooleanTrue,
+                String(kCGImageSourceShouldAllowFloat): kCFBooleanTrue
+            ]
 
             if createFromFullImage {
                 options[String(kCGImageSourceCreateThumbnailFromImageAlways)] = kCFBooleanTrue

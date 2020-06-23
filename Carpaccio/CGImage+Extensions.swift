@@ -42,38 +42,53 @@ public extension CGImage {
         from source: CGImageSource,
         metadata inputMetadata: ImageMetadata? = nil,
         constrainingToSize constrainedSize: CGSize? = nil,
-        decodingFullImage decodeFullImage: Bool = false
+        usingEmbeddedThumbnailIfAvailable allowEmbeddedThumbnail: Bool = false
     ) throws -> CGImage {
-        var options: [String: AnyObject] = [String(kCGImageSourceCreateThumbnailWithTransform): kCFBooleanTrue,
-                                            String(decodeFullImage ? kCGImageSourceCreateThumbnailFromImageAlways : kCGImageSourceCreateThumbnailFromImageIfAbsent): kCFBooleanTrue]
 
-        if let sz = constrainedSize {
-            let metadata: ImageMetadata = try {
-                if let metadata = inputMetadata {
-                    return metadata
-                }
-                return try ImageMetadata(imageSource: source)
-            }()
-            let maximumPixelDimension = sz.maximumPixelSize(forImageSize: metadata.size)
-            options[String(kCGImageSourceThumbnailMaxPixelSize)] = NSNumber(value: maximumPixelDimension)
+        let metadata: ImageMetadata = try {
+            if let metadata = inputMetadata {
+                return metadata
+            }
+            return try ImageMetadata(imageSource: source)
+        }()
+
+        var options: [String: NSNumber] = [
+            kCGImageSourceShouldAllowFloat as String: true as NSNumber,
+            (allowEmbeddedThumbnail ? kCGImageSourceCreateThumbnailFromImageIfAbsent : kCGImageSourceCreateThumbnailFromImageAlways) as String: true as NSNumber,
+            kCGImageSourceCreateThumbnailWithTransform as String: true as NSNumber,
+            kCGImageSourceShouldCacheImmediately as String: true as NSNumber
+        ]
+
+        if let constrainedSize = constrainedSize {
+            let maximumPixelDimension = constrainedSize.maximumPixelSize(forImageSize: metadata.size)
+            options[kCGImageSourceThumbnailMaxPixelSize as String] = maximumPixelDimension as NSNumber
         }
 
-        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary?) else {
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
             throw CGImageExtensionError.failedToLoadCGImage
+        }
+
+        if let maxDim = options[kCGImageSourceThumbnailMaxPixelSize as String]?.doubleValue {
+            assert(Double(cgImage.size.height) >= maxDim || Double(cgImage.size.width) >= maxDim)
         }
 
         return cgImage
     }
 
-    static func loadCGImage(from url: URL, metadata: ImageMetadata? = nil, constrainingToSize size: CGSize? = nil, decodingFullImage: Bool = false) throws -> CGImage {
-        let options = [String(kCGImageSourceShouldCache): false,
-                       String(kCGImageSourceShouldAllowFloat): true] as NSDictionary as CFDictionary
+    static func loadCGImage(
+        from url: URL,
+        metadata: ImageMetadata? = nil,
+        constrainingToSize constrainedSize: CGSize? = nil,
+        usingEmbeddedThumbnailIfAvailable allowEmbeddedThumbnail: Bool = false
+    ) throws -> CGImage {
+
+        let options = [kCGImageSourceShouldCache as String: false as NSNumber] as CFDictionary
 
         guard let source: CGImageSource = CGImageSourceCreateWithURL(url as CFURL, options) else {
             throw CGImageExtensionError.failedToOpenCGImage(url: url)
         }
 
-        return try loadCGImage(from: source, metadata: metadata, constrainingToSize: size, decodingFullImage: decodingFullImage)
+        return try loadCGImage(from: source, metadata: metadata, constrainingToSize: constrainedSize, usingEmbeddedThumbnailIfAvailable: allowEmbeddedThumbnail)
     }
 
     static func cgImageFromPNGData(_ pngData: Data) throws -> CGImage {
