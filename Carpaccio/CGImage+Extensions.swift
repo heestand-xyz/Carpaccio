@@ -68,10 +68,6 @@ public extension CGImage {
             throw CGImageExtensionError.failedToLoadCGImage
         }
 
-        if let maxDim = options[kCGImageSourceThumbnailMaxPixelSize as String]?.doubleValue {
-            assert(Double(cgImage.size.height) >= maxDim || Double(cgImage.size.width) >= maxDim)
-        }
-
         return cgImage
     }
 
