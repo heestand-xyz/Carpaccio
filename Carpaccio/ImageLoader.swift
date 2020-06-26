@@ -44,23 +44,10 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
     }
 
     public enum ThumbnailScheme: Int {
-        case never
-        case alwaysDecodeFullImage
-        case fullImageIfThumbnailTooSmall
-        case fullImageIfThumbnailMissing
-
-        /**
-         With this thumbnail scheme in effect, determine if it's any use to load a thumbnail embedded
-         in an image file at all.
-         */
-        public var shouldLoadThumbnail: Bool {
-            switch self {
-            case .alwaysDecodeFullImage, .never:
-                return false
-            case .fullImageIfThumbnailMissing, .fullImageIfThumbnailTooSmall:
-                return true
-            }
-        }
+        case decodeFullImage
+        case decodeFullImageIfEmbeddedThumbnailTooSmall
+        case decodeFullImageIfEmbeddedThumbnailMissing
+        case allowEmbeddedThumbnailOnly
 
         /**
 
@@ -80,11 +67,11 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
          */
         public func shouldLoadFullSizeImage(having thumbnailCGImage: CGImage?, desiredMaximumPixelDimensions targetMaxSize: CGSize?, ratio: CGFloat = 1.0) -> Bool {
             switch self {
-            case .alwaysDecodeFullImage:
+            case .decodeFullImage:
                 return true
-            case .fullImageIfThumbnailMissing:
+            case .decodeFullImageIfEmbeddedThumbnailMissing:
                 return thumbnailCGImage == nil
-            case .fullImageIfThumbnailTooSmall:
+            case .decodeFullImageIfEmbeddedThumbnailTooSmall:
                 guard let cgImage = thumbnailCGImage else {
                     // No candidate thumbnail has been loaded yet, so must load full image
                     return true
@@ -96,7 +83,7 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
                 let candidateSize = CGSize(width: cgImage.width, height: cgImage.height)
                 let should = !candidateSize.isSufficientToFulfill(targetSize: targetMaxSize, atMinimumRatio: ratio)
                 return should
-            case .never:
+            case .allowEmbeddedThumbnailOnly:
                 return false
             }
         }
@@ -199,21 +186,19 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
         return metadata
     }
 
-    public func loadThumbnailCGImage(maximumPixelDimensions maximumSize: CGSize? = nil,
-                                     allowCropping: Bool = true,
-                                     cancelled cancelChecker: CancellationChecker?) throws -> (CGImage, ImageMetadata)
-    {
+    public func loadThumbnailCGImage(
+        maximumPixelDimensions maximumSize: CGSize? = nil,
+        allowCropping: Bool = true,
+        cancelled cancelChecker: CancellationChecker?
+    ) throws -> (CGImage, ImageMetadata) {
+
         let metadata = try loadImageMetadataIfNeeded()
         let source = try imageSource()
         
-        guard self.thumbnailScheme != .never else {
-            throw ImageLoadingError.loadingSetToNever(URL: self.imageURL, message: "Image thumbnail failed to be loaded as the loader responsible for it is set to never load thumbnails.")
-        }
-
         // Load thumbnail
         try stopIfCancelled(cancelChecker, "Before loading thumbnail image")
 
-        let createFromFullImage = thumbnailScheme == .alwaysDecodeFullImage
+        let createFromFullImage = thumbnailScheme == .decodeFullImage
 
         var options: [String: AnyObject] = {
             var options: [String: AnyObject] = [
@@ -354,7 +339,7 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
         
         let context = CIContext(options: [
             CIContextOption.cacheIntermediates: false,
-            CIContextOption.priorityRequestLow: true,
+            CIContextOption.priorityRequestLow: false,
             CIContextOption.useSoftwareRenderer: false,
             CIContextOption.workingColorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!,
             CIContextOption.workingFormat: CIFormat.RGBAh,

@@ -18,6 +18,10 @@ public extension CGSize {
         self.init(width: CGFloat.infinity, height: h)
     }
 
+    var isConstrained: Bool {
+        return width.isFinite || height.isFinite
+    }
+
     static func * (size: CGSize, scale: CGFloat) -> CGSize {
         CGSize(width: size.width * scale, height: size.height * scale)
     }
@@ -97,12 +101,20 @@ public extension CGSize {
         return min(imageSize.height, self.height)
     }
 
-    func proportionalWidth(forHeight height: CGFloat) -> CGFloat {
-        return height * self.aspectRatio
+    func proportionalWidth(forHeight height: CGFloat, integral: Bool = true) -> CGFloat {
+        let width = height * self.aspectRatio
+        if integral {
+            return round(width)
+        }
+        return width
     }
     
-    func proportionalHeight(forWidth width: CGFloat) -> CGFloat {
-        return width / self.aspectRatio
+    func proportionalHeight(forWidth width: CGFloat, integral: Bool = true) -> CGFloat {
+        let height = width / self.aspectRatio
+        if integral {
+            return round(height)
+        }
+        return height
     }
     
     func distance(to: CGSize) -> CGFloat {
@@ -126,23 +138,23 @@ public extension CGSize {
 
      */
     func isSufficientToFulfill(targetSize: CGSize, atMinimumRatio ratio: CGFloat = 1.0) -> Bool {
-        let considerWidth = targetSize.width >= 1.0 && targetSize.width != CGFloat.infinity
-        if considerWidth {
-            let widthIsSufficient = ((1.0 / ratio) * width) >= targetSize.width
-            if widthIsSufficient {
-                return true
+        let widthIsSufficient: Bool = {
+            let considerWidth = targetSize.width >= 1.0 && targetSize.width != CGFloat.infinity
+            if considerWidth {
+                return ((1.0 / ratio) * width) >= targetSize.width
             }
-        }
+            return true
+        }()
 
-        let considerHeight = targetSize.height >= 1.0 && targetSize.height != CGFloat.infinity
-        if considerHeight {
-            let heightIsSufficient = ((1.0 / ratio) * height) >= targetSize.height
-            if heightIsSufficient {
-                return true
+        let heightIsSufficient: Bool = {
+            let considerHeight = targetSize.height >= 1.0 && targetSize.height != CGFloat.infinity
+            if considerHeight {
+                return ((1.0 / ratio) * height) >= targetSize.height
             }
-        }
+            return true
+        }()
 
-        return false
+        return widthIsSufficient && heightIsSufficient
     }
 }
 

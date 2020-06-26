@@ -147,7 +147,7 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
             } else if cachedLoader.colorSpace == colorSpace {
                 return cachedLoader
             } else {
-                let newLoader = Image.defaultImageLoaderType.init(imageLoader: cachedLoader, thumbnailScheme: .fullImageIfThumbnailTooSmall, colorSpace: colorSpace)
+                let newLoader = Image.defaultImageLoaderType.init(imageLoader: cachedLoader, thumbnailScheme: .decodeFullImageIfEmbeddedThumbnailTooSmall, colorSpace: colorSpace)
                 cachedImageLoader = newLoader
                 return newLoader
             }
@@ -158,9 +158,9 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
         }
         
         if Image.isRAWImage(at: url) {
-            cachedImageLoader = Image.defaultImageLoaderType.init(imageURL: url, thumbnailScheme: .fullImageIfThumbnailTooSmall, colorSpace: colorSpace)
+            cachedImageLoader = Image.defaultImageLoaderType.init(imageURL: url, thumbnailScheme: .decodeFullImageIfEmbeddedThumbnailTooSmall, colorSpace: colorSpace)
         } else if Image.isBakedImage(at: url) {
-            cachedImageLoader = Image.defaultImageLoaderType.init(imageURL: url, thumbnailScheme: .fullImageIfThumbnailTooSmall, colorSpace: colorSpace)
+            cachedImageLoader = Image.defaultImageLoaderType.init(imageURL: url, thumbnailScheme: .decodeFullImageIfEmbeddedThumbnailTooSmall, colorSpace: colorSpace)
         }
         
         return cachedImageLoader
@@ -190,7 +190,7 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
                 throw Error.urlMissing
             }
             
-            let loader = Image.defaultImageLoaderType.init(imageURL: URL, thumbnailScheme: .never, colorSpace: nil)
+            let loader = Image.defaultImageLoaderType.init(imageURL: URL, thumbnailScheme: .allowEmbeddedThumbnailOnly, colorSpace: nil)
             return loader
         }()
         

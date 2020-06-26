@@ -42,9 +42,10 @@ public extension CGImage {
         from source: CGImageSource,
         metadata inputMetadata: ImageMetadata? = nil,
         constrainingToSize constrainedSize: CGSize? = nil,
-        usingEmbeddedThumbnailIfAvailable allowEmbeddedThumbnail: Bool = false
+        thumbnailScheme proposedScheme: ImageLoader.ThumbnailScheme
     ) throws -> CGImage {
 
+        // Ensure we have metadata
         let metadata: ImageMetadata = try {
             if let metadata = inputMetadata {
                 return metadata
@@ -52,16 +53,44 @@ public extension CGImage {
             return try ImageMetadata(imageSource: source)
         }()
 
+        // In case the caller didn't provide any size constraints, we will decode
+        // the full image _unless_ an embedded thumbnail is explicitly requested
+        let thumbnailScheme: ImageLoader.ThumbnailScheme = {
+            if proposedScheme == .allowEmbeddedThumbnailOnly {
+                return proposedScheme
+            }
+            if let size = constrainedSize, size.isConstrained {
+                return proposedScheme
+            }
+            return .decodeFullImage
+        }()
+
+        // Optional prepare pass: for the `decodeFullImageIfEmbeddedThumbnailTooSmall` scheme, see if embedded thumbnail is large enough
+        if thumbnailScheme == .decodeFullImageIfEmbeddedThumbnailTooSmall,
+            let candidate = try? loadCGImage(from: source, metadata: metadata, constrainingToSize: constrainedSize, thumbnailScheme: .allowEmbeddedThumbnailOnly),
+            !thumbnailScheme.shouldLoadFullSizeImage(having: candidate, desiredMaximumPixelDimensions: constrainedSize) {
+                return candidate // Thumbnail is enough, we are done
+        }
+
+        // Main pass: decode either full image or embedded thumbnail, according to scheme
         var options: [String: NSNumber] = [
-            kCGImageSourceShouldAllowFloat as String: true as NSNumber,
-            (allowEmbeddedThumbnail ? kCGImageSourceCreateThumbnailFromImageIfAbsent : kCGImageSourceCreateThumbnailFromImageAlways) as String: true as NSNumber,
             kCGImageSourceCreateThumbnailWithTransform as String: true as NSNumber,
+            kCGImageSourceShouldAllowFloat as String: true as NSNumber,
             kCGImageSourceShouldCacheImmediately as String: true as NSNumber
         ]
 
         if let constrainedSize = constrainedSize {
             let maximumPixelDimension = constrainedSize.maximumPixelSize(forImageSize: metadata.size)
             options[kCGImageSourceThumbnailMaxPixelSize as String] = maximumPixelDimension as NSNumber
+        }
+
+        switch thumbnailScheme {
+        case .decodeFullImage, .decodeFullImageIfEmbeddedThumbnailTooSmall:
+            options[kCGImageSourceCreateThumbnailFromImageAlways as String] = true as NSNumber
+        case .decodeFullImageIfEmbeddedThumbnailMissing:
+            options[kCGImageSourceCreateThumbnailFromImageIfAbsent as String] = true as NSNumber
+        case .allowEmbeddedThumbnailOnly:
+            options[kCGImageSourceCreateThumbnailFromImageIfAbsent as String] = false as NSNumber
         }
 
         guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
@@ -75,7 +104,7 @@ public extension CGImage {
         from url: URL,
         metadata: ImageMetadata? = nil,
         constrainingToSize constrainedSize: CGSize? = nil,
-        usingEmbeddedThumbnailIfAvailable allowEmbeddedThumbnail: Bool = false
+        thumbnailScheme: ImageLoader.ThumbnailScheme
     ) throws -> CGImage {
 
         let options = [kCGImageSourceShouldCache as String: false as NSNumber] as CFDictionary
@@ -84,7 +113,7 @@ public extension CGImage {
             throw CGImageExtensionError.failedToOpenCGImage(url: url)
         }
 
-        return try loadCGImage(from: source, metadata: metadata, constrainingToSize: constrainedSize, usingEmbeddedThumbnailIfAvailable: allowEmbeddedThumbnail)
+        return try loadCGImage(from: source, metadata: metadata, constrainingToSize: constrainedSize, thumbnailScheme: thumbnailScheme)
     }
 
     static func cgImageFromPNGData(_ pngData: Data) throws -> CGImage {
