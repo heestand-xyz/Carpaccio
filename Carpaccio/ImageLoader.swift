@@ -47,7 +47,7 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
         case decodeFullImage
         case decodeFullImageIfEmbeddedThumbnailTooSmall
         case decodeFullImageIfEmbeddedThumbnailMissing
-        case allowEmbeddedThumbnailOnly
+        case decodeEmbeddedThumbnail
 
         /**
 
@@ -83,7 +83,7 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
                 let candidateSize = CGSize(width: cgImage.width, height: cgImage.height)
                 let should = !candidateSize.isSufficientToFulfill(targetSize: targetMaxSize, atMinimumRatio: ratio)
                 return should
-            case .allowEmbeddedThumbnailOnly:
+            case .decodeEmbeddedThumbnail:
                 return false
             }
         }

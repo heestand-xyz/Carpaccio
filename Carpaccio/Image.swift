@@ -190,7 +190,7 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
                 throw Error.urlMissing
             }
             
-            let loader = Image.defaultImageLoaderType.init(imageURL: URL, thumbnailScheme: .allowEmbeddedThumbnailOnly, colorSpace: nil)
+            let loader = Image.defaultImageLoaderType.init(imageURL: URL, thumbnailScheme: .decodeEmbeddedThumbnail, colorSpace: nil)
             return loader
         }()
         

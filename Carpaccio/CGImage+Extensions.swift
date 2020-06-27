@@ -53,24 +53,30 @@ public extension CGImage {
             return try ImageMetadata(imageSource: source)
         }()
 
+        // Optional prepare pass for the `decodeFullImageIfEmbeddedThumbnailTooSmall` scheme:
+        // see if an embedded thumbnail is large enough
+        switch proposedScheme {
+        case .decodeFullImageIfEmbeddedThumbnailTooSmall:
+            if let candidate = try? loadCGImage(from: source, metadata: metadata, constrainingToSize: constrainedSize, thumbnailScheme: .decodeEmbeddedThumbnail),
+                !proposedScheme.shouldLoadFullSizeImage(having: candidate, desiredMaximumPixelDimensions: constrainedSize) {
+                return candidate
+            }
+        default: ()
+        }
+
         // In case the caller didn't provide any size constraints, we will decode
         // the full image _unless_ an embedded thumbnail is explicitly requested
         let thumbnailScheme: ImageLoader.ThumbnailScheme = {
-            if proposedScheme == .allowEmbeddedThumbnailOnly {
+            switch proposedScheme {
+            case .decodeEmbeddedThumbnail:
                 return proposedScheme
+            default:
+                if let size = constrainedSize, size.isConstrained {
+                    return proposedScheme
+                }
+                return .decodeFullImage
             }
-            if let size = constrainedSize, size.isConstrained {
-                return proposedScheme
-            }
-            return .decodeFullImage
         }()
-
-        // Optional prepare pass: for the `decodeFullImageIfEmbeddedThumbnailTooSmall` scheme, see if embedded thumbnail is large enough
-        if thumbnailScheme == .decodeFullImageIfEmbeddedThumbnailTooSmall,
-            let candidate = try? loadCGImage(from: source, metadata: metadata, constrainingToSize: constrainedSize, thumbnailScheme: .allowEmbeddedThumbnailOnly),
-            !thumbnailScheme.shouldLoadFullSizeImage(having: candidate, desiredMaximumPixelDimensions: constrainedSize) {
-                return candidate // Thumbnail is enough, we are done
-        }
 
         // Main pass: decode either full image or embedded thumbnail, according to scheme
         var options: [String: NSNumber] = [
@@ -89,7 +95,7 @@ public extension CGImage {
             options[kCGImageSourceCreateThumbnailFromImageAlways as String] = true as NSNumber
         case .decodeFullImageIfEmbeddedThumbnailMissing:
             options[kCGImageSourceCreateThumbnailFromImageIfAbsent as String] = true as NSNumber
-        case .allowEmbeddedThumbnailOnly:
+        case .decodeEmbeddedThumbnail:
             options[kCGImageSourceCreateThumbnailFromImageIfAbsent as String] = false as NSNumber
         }
 
