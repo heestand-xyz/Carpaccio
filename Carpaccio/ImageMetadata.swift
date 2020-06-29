@@ -212,6 +212,13 @@ public struct ImageMetadata: Codable {
         self.init(nativeSize: CGSize(width: validWidth, height: validHeight), nativeOrientation: orientation ?? .up, colorSpaceName: colorSpaceName, fNumber: fNumber, focalLength: focalLength, focalLength35mmEquivalent: focalLength35mm, iso: iso, shutterSpeed: shutterSpeed, cameraMaker: cameraMaker, cameraModel: cameraModel, timestamp: timestamp)
     }
 
+    public static func loadImageMetadataIfNeeded(from source: CGImageSource, having inputMetadata: ImageMetadata?) throws -> ImageMetadata {
+        if let metadata = inputMetadata {
+            return metadata
+        }
+        return try ImageMetadata(imageSource: source)
+    }
+
     // See ImageMetadata.timestamp for known caveats about EXIF/TIFF
     // date metadata, as interpreted by this date formatter.
     private static let EXIFDateFormatter: DateFormatter = {

@@ -7,6 +7,7 @@
 //
 
 import CoreGraphics
+import CoreImage
 
 public enum CGImageExtensionError: LocalizedError {
     case failedToLoadCGImage
@@ -46,12 +47,7 @@ public extension CGImage {
     ) throws -> CGImage {
 
         // Ensure we have metadata
-        let metadata: ImageMetadata = try {
-            if let metadata = inputMetadata {
-                return metadata
-            }
-            return try ImageMetadata(imageSource: source)
-        }()
+        let metadata = try ImageMetadata.loadImageMetadataIfNeeded(from: source, having: inputMetadata)
 
         // Optional prepare pass for the `decodeFullImageIfEmbeddedThumbnailTooSmall` scheme:
         // see if an embedded thumbnail is large enough
@@ -108,7 +104,7 @@ public extension CGImage {
 
     static func loadCGImage(
         from url: URL,
-        metadata: ImageMetadata? = nil,
+        metadata inputMetadata: ImageMetadata? = nil,
         constrainingToSize constrainedSize: CGSize? = nil,
         thumbnailScheme: ImageLoader.ThumbnailScheme
     ) throws -> CGImage {
@@ -119,7 +115,13 @@ public extension CGImage {
             throw CGImageExtensionError.failedToOpenCGImage(url: url)
         }
 
-        return try loadCGImage(from: source, metadata: metadata, constrainingToSize: constrainedSize, thumbnailScheme: thumbnailScheme)
+        let metadata = try ImageMetadata.loadImageMetadataIfNeeded(from: source, having: inputMetadata)
+        
+        if Image.isRAWImage(at: url) {
+            return try CIImage.loadCIImage(from: url, imageMetadata: metadata, options: ImageLoadingOptions(maximumPixelDimensions: constrainedSize)).cgImage()
+        } else {
+            return try loadCGImage(from: source, metadata: metadata, constrainingToSize: constrainedSize, thumbnailScheme: thumbnailScheme)
+        }
     }
 
     static func cgImageFromPNGData(_ pngData: Data) throws -> CGImage {

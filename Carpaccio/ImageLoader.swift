@@ -324,108 +324,18 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
         let (thumbnailImage, metadata) = try loadThumbnailCGImage(maximumPixelDimensions: maxPixelSize, allowCropping: allowCropping, cancelled: cancelled)
         return (BitmapImageUtility.image(cgImage: thumbnailImage, size: CGSize.zero), metadata)
     }
-    
-    struct BakingContextKey: Hashable {
-        let pathExtension: String
-        let colorSpace: CGColorSpace
-    }
-    
-    private static var imageBakingContextsByColorSpace = [CGColorSpace: CIContext]()
-    
-    fileprivate static func imageBakingContext(for colorSpace: CGColorSpace) -> CIContext {
-        if let context = imageBakingContextsByColorSpace[colorSpace] {
-            return context
-        }
-        
-        let context = CIContext(options: [
-            CIContextOption.cacheIntermediates: false,
-            CIContextOption.priorityRequestLow: false,
-            CIContextOption.useSoftwareRenderer: false,
-            CIContextOption.workingColorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!,
-            CIContextOption.workingFormat: CIFormat.RGBAh,
-            CIContextOption.outputColorSpace: colorSpace
-        ])
 
-        imageBakingContextsByColorSpace[colorSpace] = context
-        return context
-    }
-    
     public func loadFullSizeImage(options: ImageLoadingOptions) throws -> (BitmapImage, ImageMetadata) {
         let metadata = try loadImageMetadataIfNeeded()
-        let ciImage = try ImageLoader.loadCIImage(at: imageURL, imageMetadata: metadata, options: options)
-
-        guard let bitmapImage = ciImage.bitmapImage(using: colorSpace) else {
-            throw ImageLoadingError.failedToLoadDecodedImage(URL: imageURL, message: "Failed to make adjustable CIImage into a bitmap image")
-        }
-
+        let ciImage = try CIImage.loadCIImage(from: imageURL, imageMetadata: metadata, options: options)
+        let bitmapImage = try ciImage.bitmapImage(using: colorSpace)
         return (bitmapImage, metadata)
     }
 
     public func loadEditableImage(options: ImageLoadingOptions, cancelled: CancellationChecker?) throws -> (CIImage, ImageMetadata) {
         let metadata = try loadImageMetadataIfNeeded()
         try stopIfCancelled(cancelled, "Before loading editable image")
-        let ciImage = try ImageLoader.loadCIImage(at: imageURL, imageMetadata: metadata, options: options)
+        let ciImage = try CIImage.loadCIImage(from: imageURL, imageMetadata: metadata, options: options)
         return (ciImage, metadata)
-    }
-
-    public static func loadCIImage(at url: URL, imageMetadata: ImageMetadata?, options: ImageLoadingOptions) throws -> CIImage {
-        guard let rawFilter = CIFilter(imageURL: url, options: nil) else {
-            throw ImageLoadingError.failedToInitializeDecoder(URL: url, message: "Failed to load full-size RAW image at \(url.path)")
-        }
-
-        let scale: Double = {
-            guard let targetSize = options.maximumPixelDimensions, let metadata = imageMetadata else {
-                return 1.0
-            }
-            let height = targetSize.scaledHeight(forImageSize: metadata.size)
-            return Double(height / metadata.size.height)
-        }()
-
-        // NOTE: Having draft mode on appears to be crucial to performance,
-        // with a difference of 0.3s vs. 2.5s per image on this iMac 5K, for instance.
-        // The quality is still quite excellent for displaying scaled-down presentations in a collection view,
-        // subjectively better than what you get from LibRAW with the half-size option.
-        rawFilter.setValue(true, forKey: CIRAWFilterOption.allowDraftMode.rawValue)
-        rawFilter.setValue(scale, forKey: CIRAWFilterOption.scaleFactor.rawValue)
-
-        if let value = options.baselineExposure {
-            rawFilter.setValue(value, forKey: CIRAWFilterOption.baselineExposure.rawValue)
-        }
-
-        rawFilter.setValue(options.noiseReductionAmount, forKey: CIRAWFilterOption.noiseReductionAmount.rawValue)
-        rawFilter.setValue(options.colorNoiseReductionAmount, forKey: CIRAWFilterOption.colorNoiseReductionAmount.rawValue)
-        rawFilter.setValue(options.noiseReductionSharpnessAmount, forKey: CIRAWFilterOption.noiseReductionSharpnessAmount.rawValue)
-        rawFilter.setValue(options.noiseReductionContrastAmount, forKey: CIRAWFilterOption.noiseReductionContrastAmount.rawValue)
-        rawFilter.setValue(options.boostShadowAmount, forKey: CIRAWFilterOption.boostShadowAmount.rawValue)
-        rawFilter.setValue(options.enableVendorLensCorrection, forKey: CIRAWFilterOption.enableVendorLensCorrection.rawValue)
-
-        guard let rawImage = rawFilter.outputImage else {
-            throw ImageLoadingError.failedToDecode(URL: url, message: "Failed to decode image at \(url.path)")
-        }
-
-        return rawImage
-    }
-}
-
-extension CGColorSpace: Hashable {
-}
-
-public extension CIImage {
-    func bitmapImage(using requestedColorSpace: CGColorSpace? = nil) -> BitmapImage? {
-        let colorSpace = requestedColorSpace ?? CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!
-        let context = ImageLoader.imageBakingContext(for: colorSpace)
-
-        //
-        // Pixel format and color space set as discussed around 21:50 in:
-        //
-        //   https://developer.apple.com/videos/play/wwdc2016/505/
-        //
-        // The `deferred: false` argument is important, to ensure significant rendering work will not
-        // be performed later _at drawing time_ on the main thread.
-        //
-        if let cgImage = context.createCGImage(self, from: extent, format: CIFormat.RGBAh, colorSpace: colorSpace, deferred: false) {
-            return BitmapImageUtility.image(cgImage: cgImage, size: CGSize.zero)
-        }
-        return BitmapImageUtility.image(ciImage: self)
     }
 }

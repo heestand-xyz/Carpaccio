@@ -13,8 +13,7 @@ public typealias ImageMetadataHandler = (_ metadata: ImageMetadata) -> Void
 
 public typealias PresentableImageHandler = (_ image: BitmapImage, _ metadata: ImageMetadata) -> Void
 
-public enum ImageLoadingError: Swift.Error, LocalizedError
-{
+public enum ImageLoadingError: Swift.Error, LocalizedError {
     case failedToExtractImageMetadata(URL: URL, message: String)
     case failedToLoadThumbnailImage(URL: URL, message: String)
     case failedToLoadFullSizeImage(URL: URL, message: String)
@@ -25,6 +24,7 @@ public enum ImageLoadingError: Swift.Error, LocalizedError
     case loadingSetToNever(URL: URL, message: String)
     case expectingMetadata(URL: URL, message: String)
     case failedToConvertColorSpace(url: URL, message: String)
+    case failedToCreateCGImage
     case cancelled(url: URL, message: String)
 
     public var errorCode: Int {
@@ -39,7 +39,8 @@ public enum ImageLoadingError: Swift.Error, LocalizedError
         case .loadingSetToNever: return 8
         case .expectingMetadata: return 9
         case .failedToConvertColorSpace: return 10
-        case .cancelled: return 11
+        case .failedToCreateCGImage: return 11
+        case .cancelled: return 12
         }
     }
 
@@ -65,6 +66,8 @@ public enum ImageLoadingError: Swift.Error, LocalizedError
             return "Failing to receive expected metadata for file at URL \(url): \(msg)"
         case .failedToConvertColorSpace(let url, let msg):
             return "Failed to convert image color space for file at URL \(url): \(msg)"
+        case .failedToCreateCGImage:
+            return "Failed to create CGImage from CIImage"
         case .cancelled(let url, let msg):
             return "Operation for image at URL \(url) was cancelled: \(msg)"
         }
@@ -92,6 +95,8 @@ public enum ImageLoadingError: Swift.Error, LocalizedError
             return msg
         case .failedToConvertColorSpace(_, let msg):
             return msg
+        case .failedToCreateCGImage:
+            return nil
         case .cancelled(_, let msg):
             return msg
         }
@@ -107,41 +112,6 @@ public enum ImageLoadingError: Swift.Error, LocalizedError
 }
 
 public typealias ImageLoadingErrorHandler = (_ error: ImageLoadingError) -> Void
-
-public struct ImageLoadingOptions {
-    public let maximumPixelDimensions: CGSize?
-
-    public let allowDraftMode: Bool
-    public let baselineExposure: Double?
-    public let noiseReductionAmount: Double
-    public let colorNoiseReductionAmount: Double
-    public let noiseReductionSharpnessAmount: Double
-    public let noiseReductionContrastAmount: Double
-    public let boostShadowAmount: Double
-    public let enableVendorLensCorrection: Bool
-
-    public init(
-        maximumPixelDimensions: CGSize? = nil,
-        allowDraftMode: Bool = true,
-        baselineExposure: Double? = nil,
-        noiseReductionAmount: Double = 0.5,
-        colorNoiseReductionAmount: Double = 1.0,
-        noiseReductionSharpnessAmount: Double = 0.5,
-        noiseReductionContrastAmount: Double = 0.5,
-        boostShadowAmount: Double = 2.0,
-        enableVendorLensCorrection: Bool = true
-    ) {
-        self.maximumPixelDimensions = maximumPixelDimensions
-        self.allowDraftMode = allowDraftMode
-        self.baselineExposure = baselineExposure
-        self.noiseReductionAmount = noiseReductionAmount
-        self.colorNoiseReductionAmount = colorNoiseReductionAmount
-        self.noiseReductionSharpnessAmount = noiseReductionSharpnessAmount
-        self.noiseReductionContrastAmount = noiseReductionContrastAmount
-        self.boostShadowAmount = boostShadowAmount
-        self.enableVendorLensCorrection = enableVendorLensCorrection
-    }
-}
 
 /**
  
