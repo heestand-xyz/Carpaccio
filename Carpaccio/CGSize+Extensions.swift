@@ -9,6 +9,28 @@
 import Foundation
 import QuartzCore
 
+public enum PrecisionScheme {
+    /** Return precise value as-is. */
+    case precise
+
+    /** Return precise value floored. */
+    case floored
+
+    /** Return precise value rounded. */
+    case rounded
+
+    func applied<T: FloatingPoint>(to preciseValue: T) -> T {
+        switch self {
+        case .precise:
+            return preciseValue
+        case .floored:
+            return floor(preciseValue)
+        case .rounded:
+            return round(preciseValue)
+        }
+    }
+}
+
 public extension CGSize {
     init(constrainWidth w: CGFloat) {
         self.init(width: w, height: CGFloat.infinity)
@@ -40,13 +62,13 @@ public extension CGSize {
         return self.width / self.height
     }
 
-    func proportionalSize(for imageSize: CGSize) -> CGSize {
+    func proportionalSize(for imageSize: CGSize, precision: PrecisionScheme) -> CGSize {
         let maximumDimension = CGFloat(maximumPixelSize(forImageSize: imageSize))
         let ratio = imageSize.aspectRatio
         if ratio > 1.0 {
-            return CGSize(width: maximumDimension, height: round(maximumDimension / ratio))
+            return CGSize(width: precision.applied(to: maximumDimension), height: precision.applied(to: maximumDimension / ratio))
         } else {
-            return CGSize(width: round(ratio * maximumDimension), height: maximumDimension)
+            return CGSize(width: precision.applied(to: ratio * maximumDimension), height: precision.applied(to: maximumDimension))
         }
     }
 
@@ -68,7 +90,7 @@ public extension CGSize {
 
         } else if widthIsUnconstrained {
             if ratio > 1.0 {
-                return Int(round(imageSize.proportionalWidth(forHeight: self.height)))
+                return Int(imageSize.proportionalWidth(forHeight: self.height, precision: .rounded))
             }
             return Int(round(self.height))
 
@@ -76,7 +98,7 @@ public extension CGSize {
             if ratio > 1.0 {
                 return Int(round(self.width))
             }
-            return Int(round(imageSize.proportionalHeight(forWidth: self.width)))
+            return Int(imageSize.proportionalHeight(forWidth: self.width, precision: .rounded))
         }
 
         return Int(round(min(self.width, self.height)))
@@ -101,20 +123,12 @@ public extension CGSize {
         return min(imageSize.height, self.height)
     }
 
-    func proportionalWidth(forHeight height: CGFloat, integral: Bool = true) -> CGFloat {
-        let width = height * self.aspectRatio
-        if integral {
-            return round(width)
-        }
-        return width
+    func proportionalWidth(forHeight height: CGFloat, precision: PrecisionScheme) -> CGFloat {
+        precision.applied(to: height * self.aspectRatio)
     }
     
-    func proportionalHeight(forWidth width: CGFloat, integral: Bool = true) -> CGFloat {
-        let height = width / self.aspectRatio
-        if integral {
-            return round(height)
-        }
-        return height
+    func proportionalHeight(forWidth width: CGFloat, precision: PrecisionScheme) -> CGFloat {
+        precision.applied(to: width / self.aspectRatio)
     }
     
     func distance(to: CGSize) -> CGFloat {

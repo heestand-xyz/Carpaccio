@@ -43,7 +43,8 @@ public extension CGImage {
         from source: CGImageSource,
         metadata inputMetadata: ImageMetadata? = nil,
         constrainingToSize constrainedSize: CGSize? = nil,
-        thumbnailScheme proposedScheme: ImageLoader.ThumbnailScheme
+        thumbnailScheme proposedScheme: ImageLoader.ThumbnailScheme,
+        colorSpace: CGColorSpace? = nil
     ) throws -> CGImage {
 
         // Ensure we have metadata
@@ -53,8 +54,9 @@ public extension CGImage {
         // see if an embedded thumbnail is large enough
         switch proposedScheme {
         case .decodeFullImageIfEmbeddedThumbnailTooSmall:
-            if let candidate = try? loadCGImage(from: source, metadata: metadata, constrainingToSize: constrainedSize, thumbnailScheme: .decodeEmbeddedThumbnail),
-                !proposedScheme.shouldLoadFullSizeImage(having: candidate, desiredMaximumPixelDimensions: constrainedSize) {
+            if let candidate = try? loadCGImage(from: source, metadata: metadata, constrainingToSize: constrainedSize, thumbnailScheme: .decodeEmbeddedThumbnail, colorSpace: colorSpace),
+               !proposedScheme.shouldLoadFullSizeImage(having: candidate, desiredMaximumPixelDimensions: constrainedSize
+               ) {
                 return candidate
             }
         default: ()
@@ -99,6 +101,9 @@ public extension CGImage {
             throw CGImageExtensionError.failedToLoadCGImage
         }
 
+        if let colorSpace = colorSpace {
+            return try cgImage.convertedToColorSpace(colorSpace)
+        }
         return cgImage
     }
 
@@ -106,7 +111,8 @@ public extension CGImage {
         from url: URL,
         metadata inputMetadata: ImageMetadata? = nil,
         constrainingToSize constrainedSize: CGSize? = nil,
-        thumbnailScheme: ImageLoader.ThumbnailScheme
+        thumbnailScheme: ImageLoader.ThumbnailScheme,
+        colorSpace: CGColorSpace? = nil
     ) throws -> CGImage {
 
         let options = [kCGImageSourceShouldCache as String: false as NSNumber] as CFDictionary
@@ -118,9 +124,9 @@ public extension CGImage {
         let metadata = try ImageMetadata.loadImageMetadataIfNeeded(from: source, having: inputMetadata)
         
         if Image.isRAWImage(at: url) {
-            return try CIImage.loadCIImage(from: url, imageMetadata: metadata, options: ImageLoadingOptions(maximumPixelDimensions: constrainedSize)).cgImage()
+            return try CIImage.loadCIImage(from: url, imageMetadata: metadata, options: ImageLoadingOptions(maximumPixelDimensions: constrainedSize)).cgImage(using: colorSpace)
         } else {
-            return try loadCGImage(from: source, metadata: metadata, constrainingToSize: constrainedSize, thumbnailScheme: thumbnailScheme)
+            return try loadCGImage(from: source, metadata: metadata, constrainingToSize: constrainedSize, thumbnailScheme: thumbnailScheme, colorSpace: colorSpace)
         }
     }
 

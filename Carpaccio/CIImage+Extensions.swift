@@ -49,8 +49,8 @@ public extension CIImage {
         return rawImage
     }
 
-    func cgImage(using inputColorSpace: CGColorSpace? = nil) throws -> CGImage {
-        let colorSpace = inputColorSpace ?? CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!
+    func cgImage(using outputColorSpace: CGColorSpace? = nil) throws -> CGImage {
+        let colorSpace = outputColorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
         let context = ImageBakery.ciContext(for: colorSpace)
 
         //

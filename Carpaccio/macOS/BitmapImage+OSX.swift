@@ -38,10 +38,8 @@ extension BitmapImage {
 }
 
 extension NSImage {
-    
     // this is a BitmapImage protocol method
-    public func scaled(height: CGFloat, screenScaleFactor: CGFloat) -> BitmapImage
-    {
+    public func scaled(height: CGFloat, screenScaleFactor: CGFloat) -> BitmapImage {
         let aspectRatio = self.size.width / self.size.height
         let pixelHeight = height * screenScaleFactor
         let pixelWidth = round(aspectRatio * pixelHeight)
