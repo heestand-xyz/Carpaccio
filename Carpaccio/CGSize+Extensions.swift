@@ -31,13 +31,19 @@ public enum PrecisionScheme {
     }
 }
 
+public extension CGFloat {
+    static var unconstrained: CGFloat {
+        infinity
+    }
+}
+
 public extension CGSize {
-    init(constrainWidth w: CGFloat) {
-        self.init(width: w, height: CGFloat.infinity)
+    init(constrainWidth width: CGFloat) {
+        self.init(width: width, height: CGFloat.unconstrained)
     }
 
-    init(constrainHeight h: CGFloat) {
-        self.init(width: CGFloat.infinity, height: h)
+    init(constrainHeight height: CGFloat) {
+        self.init(width: CGFloat.unconstrained, height: height)
     }
 
     var isConstrained: Bool {
@@ -105,8 +111,8 @@ public extension CGSize {
     }
 
     var maximumPixelSizeConstraint: CGFloat {
-        let constrainWidth = width >= 1.0 && width != CGFloat.infinity
-        let constrainHeight = height >= 1.0 && height != CGFloat.infinity
+        let constrainWidth = width >= 1.0 && width != CGFloat.unconstrained
+        let constrainHeight = height >= 1.0 && height != CGFloat.unconstrained
         if constrainWidth && constrainHeight {
             return max(width, height)
         }
@@ -146,14 +152,14 @@ public extension CGSize {
      you should use a `ratio` value of `0.50`. The default is a minimum ratio of `1.0`, meaning at least one of
      this size's dimensions must be greater than or equal to the same dimension of `targetMaxSize`.
 
-     Note that if a dimension of `targetMaxSize` is set to `CGFloat.infinity`, that particular axis will not be
+     Note that if a dimension of `targetMaxSize` is set to `CGFloat.unconstrained`, that particular axis will not be
      considered. In such a case, _any_ value of this size, on that axis, is considered insufficient. In other words,
-     a `targetMaxSize` of `CGSize(width: CGFloat.infinity, height: CGFloat.infinity)` will always return `false`.
+     a `targetMaxSize` of `CGSize(width: CGFloat.unconstrained, height: CGFloat.unconstrained)` will always return `false`.
 
      */
     func isSufficientToFulfill(targetSize: CGSize, atMinimumRatio ratio: CGFloat = 1.0) -> Bool {
         let widthIsSufficient: Bool = {
-            let considerWidth = targetSize.width >= 1.0 && targetSize.width != CGFloat.infinity
+            let considerWidth = targetSize.width >= 1.0 && targetSize.width != CGFloat.unconstrained
             if considerWidth {
                 return ((1.0 / ratio) * width) >= targetSize.width
             }
@@ -161,7 +167,7 @@ public extension CGSize {
         }()
 
         let heightIsSufficient: Bool = {
-            let considerHeight = targetSize.height >= 1.0 && targetSize.height != CGFloat.infinity
+            let considerHeight = targetSize.height >= 1.0 && targetSize.height != CGFloat.unconstrained
             if considerHeight {
                 return ((1.0 / ratio) * height) >= targetSize.height
             }

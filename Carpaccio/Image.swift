@@ -244,7 +244,6 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
     public func fetchThumbnail(presentedHeight: CGFloat? = nil,
                                force: Bool = false,
                                store: Bool = true,
-                               scaleFactor: CGFloat = 2.0,
                                colorSpace: CGColorSpace?,
                                cancelled: CancellationChecker?) throws -> BitmapImage
     {
@@ -260,11 +259,11 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
             throw Error.urlMissing
         }
         
-        let maxDim = presentedHeight != nil ? CGSize(constrainHeight: presentedHeight! * scaleFactor) : nil
-        let (thumbnailImage, imgMetadata) = try loader.loadThumbnailImage(maximumPixelDimensions: maxDim, cancelled: cancelled)
+        let maxDimensions = CGSize(constrainHeight: presentedHeight ?? CGFloat.unconstrained)
+        let (thumbnailImage, metadata) = try loader.loadThumbnailImage(maximumPixelDimensions: maxDimensions, cancelled: cancelled)
         
         if self.metadata == nil {
-            self.metadata = imgMetadata
+            self.metadata = metadata
         }
         
         if store {
@@ -276,7 +275,6 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
     
     public func fetchFullSizeImage(presentedHeight: CGFloat? = nil,
                                    store: Bool = false,
-                                   scaleFactor: CGFloat = 2.0,
                                    colorSpace: CGColorSpace?) throws -> BitmapImage
     {
         guard self.URL != nil else {
@@ -287,13 +285,7 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
             throw Error.noLoader(self)
         }
         
-        let maxDimensions: CGSize? = {
-            if let presentedHeight = presentedHeight {
-                return CGSize(constrainHeight: presentedHeight * scaleFactor)
-            }
-            return nil
-        }()
-
+        let maxDimensions = CGSize(constrainHeight: presentedHeight ?? CGFloat.unconstrained)
         let options = ImageLoadingOptions(maximumPixelDimensions: maxDimensions)
         let image: BitmapImage, metadata: ImageMetadata
         do {
