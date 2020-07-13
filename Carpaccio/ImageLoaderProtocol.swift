@@ -16,7 +16,6 @@ public typealias PresentableImageHandler = (_ image: BitmapImage, _ metadata: Im
 public enum ImageLoadingError: Swift.Error, LocalizedError {
     case failedToExtractImageMetadata(URL: URL, message: String)
     case failedToLoadThumbnailImage(URL: URL, message: String)
-    case failedToLoadFullSizeImage(URL: URL, message: String)
     case noImageSource(URL: URL, message: String)
     case failedToInitializeDecoder(URL: URL, message: String)
     case failedToDecode(URL: URL, message: String)
@@ -31,7 +30,6 @@ public enum ImageLoadingError: Swift.Error, LocalizedError {
         switch self {
         case .failedToExtractImageMetadata: return 1
         case .failedToLoadThumbnailImage: return 2
-        case .failedToLoadFullSizeImage: return 3
         case .noImageSource: return 4
         case .failedToInitializeDecoder: return 5
         case .failedToDecode: return 6
@@ -50,8 +48,6 @@ public enum ImageLoadingError: Swift.Error, LocalizedError {
             return "Failed to extract image metadata for file at URL \(url): \(msg)"
         case .failedToLoadThumbnailImage(let url, let msg):
             return "Failed to load image thumbnail at URL \(url): \(msg)"
-        case .failedToLoadFullSizeImage(let url, let msg):
-            return "Failed to load full sized image from file at URL \(url): \(msg)"
         case .noImageSource(let url, let msg):
             return "No sources of image data present in file at URL \(url): \(msg)"
         case .failedToInitializeDecoder(let url, let msg):
@@ -78,8 +74,6 @@ public enum ImageLoadingError: Swift.Error, LocalizedError {
         case .failedToExtractImageMetadata(_, let msg):
             return msg
         case .failedToLoadThumbnailImage(_, let msg):
-            return msg
-        case .failedToLoadFullSizeImage(_, let msg):
             return msg
         case .noImageSource(_, let msg):
             return msg
@@ -143,8 +137,7 @@ public typealias CancellationChecker = () -> Bool
 public protocol ImageLoaderProtocol {
     var imageURL: URL { get }
     var imageMetadataState: ImageLoaderMetadataState { get }
-    var colorSpace: CGColorSpace? { get }
-    
+
     /** _If_, in addition to `imageURL`, full image image data happens to have been copied into a disk cache location,
       * a direct URL pointing to that location. */
     var cachedImageURL: URL? { get }
@@ -156,47 +149,31 @@ public protocol ImageLoaderProtocol {
     func loadImageMetadata() throws -> ImageMetadata
     
     /**
-     Load a thumbnail representation of this loader's associated image, optionally:
+     Load a `BitmapImage` representation of this loader's associated image, optionally:
      - Scaled down to a maximum pixel size
      - Cropped to the proportions of the image's metadata (to remove letterboxing by some cameras' thumbnails)
      */
-    func loadThumbnailImage(maximumPixelDimensions maxPixelSize: CGSize?, allowCropping: Bool, cancelled: CancellationChecker?) throws -> (BitmapImage, ImageMetadata)
+    func loadBitmapImage(maximumPixelDimensions maxPixelSize: CGSize?, colorSpace: CGColorSpace?, allowCropping: Bool, cancelled: CancellationChecker?) throws -> (BitmapImage, ImageMetadata)
     
-    func loadThumbnailCGImage(maximumPixelDimensions maximumSize: CGSize?, allowCropping: Bool, cancelled: CancellationChecker?) throws -> (CGImage, ImageMetadata)
-    
-    func loadThumbnailImage(cancelled: CancellationChecker?) throws -> (BitmapImage, ImageMetadata)
-    
-    /** Load full-size image. */
-    func loadFullSizeImage(options: ImageLoadingOptions) throws -> (BitmapImage, ImageMetadata)
-    
-    /** Load full-size image with default options. */
-    func loadFullSizeImage() throws -> (BitmapImage, ImageMetadata)
+    /**
+     Load a `CGImage` representation of this loader's associated image, optionally scaled down to a maximum pixel
+     size and cropped to the proportions of the image's metadata.
+     */
+    func loadCGImage(maximumPixelDimensions maximumSize: CGSize?, colorSpace: CGColorSpace?, allowCropping: Bool, cancelled: CancellationChecker?) throws -> (CGImage, ImageMetadata)
 
-    func loadEditableImage(options: ImageLoadingOptions, cancelled: CancellationChecker?) throws -> (CIImage, ImageMetadata)
+    /**
+     Load a `CIImage` representation of this loader's associated image, with maximum pixel dimensions and RAW decoding
+     options provided via an `ImageLoadingOptions` argument.
+     */
+    func loadCIImage(options: ImageLoadingOptions, cancelled: CancellationChecker?) throws -> (CIImage, ImageMetadata)
 }
 
 public protocol URLBackedImageLoaderProtocol: ImageLoaderProtocol {
-    init(imageURL: URL, thumbnailScheme: ImageLoader.ThumbnailScheme, colorSpace: CGColorSpace?)
-    init(imageLoader: ImageLoaderProtocol, thumbnailScheme: ImageLoader.ThumbnailScheme, colorSpace: CGColorSpace?)
+    init(imageURL: URL, thumbnailScheme: ImageLoader.ThumbnailScheme)
+    init(imageLoader: ImageLoaderProtocol, thumbnailScheme: ImageLoader.ThumbnailScheme)
 }
 
 public extension ImageLoaderProtocol {
-    func loadThumbnailImage(cancelled: CancellationChecker?) throws -> (BitmapImage, ImageMetadata) {
-        return try self.loadThumbnailImage(maximumPixelDimensions: nil, allowCropping: true, cancelled: cancelled)
-    }
-    
-    func loadThumbnailImage(maximumPixelDimensions: CGSize?, cancelled: CancellationChecker?) throws -> (BitmapImage, ImageMetadata) {
-        return try self.loadThumbnailImage(maximumPixelDimensions: maximumPixelDimensions, allowCropping: true, cancelled: cancelled)
-    }
-    
-    func loadThumbnailImage(allowCropping: Bool, cancelled: CancellationChecker?) throws -> (BitmapImage, ImageMetadata) {
-        return try self.loadThumbnailImage(maximumPixelDimensions: nil, allowCropping: allowCropping, cancelled: cancelled)
-    }
-    
-    func loadFullSizeImage() throws -> (BitmapImage, ImageMetadata) {
-        return try self.loadFullSizeImage(options: ImageLoadingOptions())
-    }
-
     /**
      Convenience func to be called by image loader implementations themselves, to check if a particular
      thumbnail or full size image loading operation has been cancelled.

@@ -90,21 +90,17 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
     }
     
     public let imageURL: URL
-    public let colorSpace: CGColorSpace?
-    
     public let cachedImageURL: URL? = nil // For now, we don't implement a disk cache for images loaded by ImageLoader
     public let thumbnailScheme: ThumbnailScheme
     
-    public required init(imageURL: URL, thumbnailScheme: ThumbnailScheme, colorSpace: CGColorSpace?) {
+    public required init(imageURL: URL, thumbnailScheme: ThumbnailScheme) {
         self.imageURL = imageURL
         self.thumbnailScheme = thumbnailScheme
-        self.colorSpace = colorSpace
     }
     
-    public required init(imageLoader otherLoader: ImageLoaderProtocol, thumbnailScheme: ThumbnailScheme, colorSpace: CGColorSpace?) {
+    public required init(imageLoader otherLoader: ImageLoaderProtocol, thumbnailScheme: ThumbnailScheme) {
         self.imageURL = otherLoader.imageURL
         self.thumbnailScheme = thumbnailScheme
-        self.colorSpace = colorSpace
         if otherLoader.imageMetadataState == .completed, let metadata = try? otherLoader.loadImageMetadata() {
             self.cachedImageMetadata = metadata
             self.imageMetadataState = .completed
@@ -186,8 +182,9 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
         return metadata
     }
 
-    public func loadThumbnailCGImage(
+    public func loadCGImage(
         maximumPixelDimensions maximumSize: CGSize? = nil,
+        colorSpace: CGColorSpace?,
         allowCropping: Bool = true,
         cancelled cancelChecker: CancellationChecker?
     ) throws -> (CGImage, ImageMetadata) {
@@ -235,7 +232,7 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
             }
 
             // Convert color space, if needed
-            guard let colorSpace = self.colorSpace else {
+            guard let colorSpace = colorSpace else {
                 return thumbnail
             }
 
@@ -320,19 +317,12 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
     }
     
     /** Retrieve a thumbnail image for this loader's image. */
-    public func loadThumbnailImage(maximumPixelDimensions maxPixelSize: CGSize?, allowCropping: Bool, cancelled: CancellationChecker?) throws -> (BitmapImage, ImageMetadata) {
-        let (thumbnailImage, metadata) = try loadThumbnailCGImage(maximumPixelDimensions: maxPixelSize, allowCropping: allowCropping, cancelled: cancelled)
+    public func loadBitmapImage(maximumPixelDimensions maxPixelSize: CGSize?, colorSpace: CGColorSpace?, allowCropping: Bool, cancelled: CancellationChecker?) throws -> (BitmapImage, ImageMetadata) {
+        let (thumbnailImage, metadata) = try loadCGImage(maximumPixelDimensions: maxPixelSize, colorSpace: colorSpace, allowCropping: allowCropping, cancelled: cancelled)
         return (BitmapImageUtility.image(cgImage: thumbnailImage, size: CGSize.zero), metadata)
     }
 
-    public func loadFullSizeImage(options: ImageLoadingOptions) throws -> (BitmapImage, ImageMetadata) {
-        let metadata = try loadImageMetadataIfNeeded()
-        let ciImage = try CIImage.loadCIImage(from: imageURL, imageMetadata: metadata, options: options)
-        let bitmapImage = try ciImage.bitmapImage(using: colorSpace)
-        return (bitmapImage, metadata)
-    }
-
-    public func loadEditableImage(options: ImageLoadingOptions, cancelled: CancellationChecker?) throws -> (CIImage, ImageMetadata) {
+    public func loadCIImage(options: ImageLoadingOptions, cancelled: CancellationChecker?) throws -> (CIImage, ImageMetadata) {
         let metadata = try loadImageMetadataIfNeeded()
         try stopIfCancelled(cancelled, "Before loading editable image")
         let ciImage = try CIImage.loadCIImage(from: imageURL, imageMetadata: metadata, options: options)

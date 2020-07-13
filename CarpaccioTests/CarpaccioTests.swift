@@ -28,9 +28,8 @@ class CarpaccioTests: XCTestCase {
         
         try! FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true, attributes: [:])
         
-        let converter = ImageLoader(imageURL: img1URL, thumbnailScheme: .decodeFullImageIfThumbnailMissing, colorSpace: nil)
-        
-        let (thumb, imageMetadata) = try! converter.loadThumbnailImage(maximumPixelDimensions: nil, allowCropping: true, cancelled: nil)
+        let loader = ImageLoader(imageURL: img1URL, thumbnailScheme: .decodeFullImageIfEmbeddedThumbnailMissing)
+        let (thumb, imageMetadata) = try! loader.loadBitmapImage(maximumPixelDimensions: nil, colorSpace: nil, allowCropping: true, cancelled: nil)
         
         XCTAssertEqual(thumb.size.width, 1616)
         XCTAssertEqual(thumb.size.height, 1080)
@@ -63,9 +62,8 @@ class CarpaccioTests: XCTestCase {
         
         try! FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true, attributes: [:])
         
-        let converter = ImageLoader(imageURL: img1URL, thumbnailScheme: .decodeFullImageIfThumbnailMissing, colorSpace: nil)
-        
-        let (image, imageMetadata) = try! converter.loadFullSizeImage()
+        let loader = ImageLoader(imageURL: img1URL, thumbnailScheme: .decodeFullImage)
+        let (image, imageMetadata) = try! loader.loadBitmapImage(maximumPixelDimensions: nil, colorSpace: nil, allowCropping: true, cancelled: nil)
         
         XCTAssertEqual(image.size.width, 2448.0)
         XCTAssertEqual(image.size.height, 3264.0)
@@ -146,7 +144,7 @@ class CarpaccioTests: XCTestCase {
             return
         }
         
-        let loader = ImageLoader(imageURL: url, thumbnailScheme: .decodeFullImageIfThumbnailMissing, colorSpace: nil)
+        let loader = ImageLoader(imageURL: url, thumbnailScheme: .decodeFullImageIfEmbeddedThumbnailMissing)
         
         XCTAssertThrowsError(try loader.loadImageMetadataIfNeeded())
         XCTAssertThrowsError(try loader.loadImageMetadataIfNeeded(forceReload: true))
@@ -159,7 +157,7 @@ class CarpaccioTests: XCTestCase {
             return
         }
         
-        let loader = ImageLoader(imageURL: url, thumbnailScheme: .decodeFullImageIfThumbnailMissing, colorSpace: nil)
-        XCTAssertThrowsError(try loader.loadThumbnailImage(maximumPixelDimensions: nil, allowCropping: true, cancelled: nil))
+        let loader = ImageLoader(imageURL: url, thumbnailScheme: .decodeFullImageIfEmbeddedThumbnailMissing)
+        XCTAssertThrowsError(try loader.loadBitmapImage(maximumPixelDimensions: nil, colorSpace: nil, allowCropping: true, cancelled: nil))
     }
 }

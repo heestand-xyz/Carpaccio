@@ -55,7 +55,6 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
     public let name: String
 
     public var thumbnailImage: BitmapImage?
-    public var fullImage: BitmapImage?
     public var editableImage: CIImage?
 
     public var size: CGSize {
@@ -91,21 +90,16 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
     /// Set the value for this to alter the type of object used by default for image and metadata loading.
     public static var defaultImageLoaderType: URLBackedImageLoaderProtocol.Type = ImageLoader.self
     
-    
-    public init(image: BitmapImage, imageLoader: ImageLoaderProtocol)
-    {
-        self.fullImage = image
+    public init(image: BitmapImage, imageLoader: ImageLoaderProtocol) {
         self.cachedImageLoader = imageLoader
         self.URL = imageLoader.imageURL
         self.name = image.nameString ?? "Untitled"
     }
     
-    public init(URL: Foundation.URL, imageLoader: ImageLoaderProtocol? = nil) throws
-    {
+    public init(URL: Foundation.URL, imageLoader: ImageLoaderProtocol? = nil) throws {
         self.URL = URL
         self.cachedImageLoader = imageLoader
         self.name = URL.lastPathComponent
-        self.fullImage = nil
     }
     
     private var cachedImageLoader: ImageLoaderProtocol?
@@ -127,8 +121,8 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
 
     public func clearCachedResources() {
         self.cachedImageLoader = nil
-        self.fullImage = nil
         self.thumbnailImage = nil
+        self.editableImage = nil
         self.fileModificationTimestamp = nil
     }
     
@@ -140,29 +134,16 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
     //         color space is assumed to not matter, and no conversion will not be performed. Has no
     //         effect for fetching image metadata.
     //
-    open func imageLoader(withColorSpace colorSpace: CGColorSpace?) -> ImageLoaderProtocol? {
+    open func imageLoader() -> ImageLoaderProtocol? {
         if let cachedLoader = cachedImageLoader {
-            if colorSpace == nil {
-                return cachedLoader
-            } else if cachedLoader.colorSpace == colorSpace {
-                return cachedLoader
-            } else {
-                let newLoader = Image.defaultImageLoaderType.init(imageLoader: cachedLoader, thumbnailScheme: .decodeFullImageIfEmbeddedThumbnailTooSmall, colorSpace: colorSpace)
-                cachedImageLoader = newLoader
-                return newLoader
-            }
+            return cachedLoader
         }
-        
+
         guard let url = self.URL else {
             return nil
         }
         
-        if Image.isRAWImage(at: url) {
-            cachedImageLoader = Image.defaultImageLoaderType.init(imageURL: url, thumbnailScheme: .decodeFullImageIfEmbeddedThumbnailTooSmall, colorSpace: colorSpace)
-        } else if Image.isBakedImage(at: url) {
-            cachedImageLoader = Image.defaultImageLoaderType.init(imageURL: url, thumbnailScheme: .decodeFullImageIfEmbeddedThumbnailTooSmall, colorSpace: colorSpace)
-        }
-        
+        cachedImageLoader = Image.defaultImageLoaderType.init(imageURL: url, thumbnailScheme: .decodeFullImageIfEmbeddedThumbnailTooSmall)
         return cachedImageLoader
     }
     
@@ -176,24 +157,10 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
      */
     public private(set) var metadata: ImageMetadata?
     
-    public func fetchMetadata() throws -> ImageMetadata
-    {
-        // In case an image loader hasn't yet been set, we create a temporary image loader
-        // for the purpose of metadata fetching. The color space argument is assumed to not
-        // matter for metadata fetching, so we try to use whatever cached loader may be set.
-        let loader = try { () throws -> ImageLoaderProtocol in
-            if let loader = self.imageLoader(withColorSpace: nil) {
-                return loader
-            }
-            
-            guard let URL = self.URL else {
-                throw Error.urlMissing
-            }
-            
-            let loader = Image.defaultImageLoaderType.init(imageURL: URL, thumbnailScheme: .decodeEmbeddedThumbnail, colorSpace: nil)
-            return loader
-        }()
-        
+    public func fetchMetadata() throws -> ImageMetadata {
+        guard let loader = imageLoader() else {
+            throw Error.noLoader(self)
+        }
         let metadata = try loader.loadImageMetadata()
         self.metadata = metadata
         return metadata
@@ -251,7 +218,7 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
             return thumb
         }
         
-        guard let loader = imageLoader(withColorSpace: colorSpace) else {
+        guard let loader = imageLoader() else {
             throw Error.noLoader(self)
         }
         
@@ -260,7 +227,7 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
         }
         
         let maxDimensions = CGSize(constrainHeight: presentedHeight ?? CGFloat.unconstrained)
-        let (thumbnailImage, metadata) = try loader.loadThumbnailImage(maximumPixelDimensions: maxDimensions, cancelled: cancelled)
+        let (thumbnailImage, metadata) = try loader.loadBitmapImage(maximumPixelDimensions: maxDimensions, colorSpace: colorSpace, allowCropping: true, cancelled: cancelled)
         
         if self.metadata == nil {
             self.metadata = metadata
@@ -271,42 +238,6 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
         }
         
         return thumbnailImage
-    }
-    
-    public func fetchFullSizeImage(presentedHeight: CGFloat? = nil,
-                                   store: Bool = false,
-                                   colorSpace: CGColorSpace?) throws -> BitmapImage
-    {
-        guard self.URL != nil else {
-            throw Error.urlMissing
-        }
-        
-        guard let loader = imageLoader(withColorSpace: colorSpace) else {
-            throw Error.noLoader(self)
-        }
-        
-        let maxDimensions = CGSize(constrainHeight: presentedHeight ?? CGFloat.unconstrained)
-        let options = ImageLoadingOptions(maximumPixelDimensions: maxDimensions)
-        let image: BitmapImage, metadata: ImageMetadata
-        do {
-            // looks ugly but I couldn't find a neater way to destructure into existing local variables.
-            let (img, mdata) = try loader.loadFullSizeImage(options: options)
-            image = img
-            metadata = mdata
-        }
-        catch {
-            throw Error.loadingFailed(underlyingError: error)
-        }
-        
-        if self.metadata == nil {
-            self.metadata = metadata
-        }
-        
-        if store {
-            self.fullImage = image
-        }
-        
-        return image
     }
 
     public func fetchEditableImage(
@@ -319,7 +250,7 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
         guard self.URL != nil else {
             throw Error.urlMissing
         }
-        guard let loader = imageLoader(withColorSpace: colorSpace) else {
+        guard let loader = imageLoader() else {
             throw Error.noLoader(self)
         }
 
@@ -334,7 +265,7 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
 
         let (ciImage, metadata): (CIImage, ImageMetadata) = try {
             do {
-                return try loader.loadEditableImage(options: options, cancelled: cancelled)
+                return try loader.loadCIImage(options: options, cancelled: cancelled)
             } catch {
                 throw Error.loadingFailed(underlyingError: error)
             }
@@ -397,18 +328,9 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
     }
 
     public var description: String {
-        return "(name: \(self.name), URL: \(self.URL?.absoluteString ?? "(unknown)"), thumbnail loaded: \(self.thumbnailImage != nil), full image loaded: \(self.fullImage != nil))"
+        return "(name: \(self.name), URL: \(self.URL?.absoluteString ?? "(unknown)"), bitmap image loaded: \(self.thumbnailImage != nil), CIImage loaded: \(self.editableImage != nil))"
     }
 }
-
-/*
-public func == (lhs:Image, rhs:Image) -> Bool {
-    return lhs.name == rhs.name
-            && lhs.thumbnailImage === rhs.thumbnailImage
-            && lhs.fullImage === rhs.fullImage
-            && lhs.URL == rhs.URL
-}
- */
 
 public func == (lhs:Image, rhs:Image) -> Bool {
     return lhs.URL == rhs.URL
