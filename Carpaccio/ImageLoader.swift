@@ -279,7 +279,7 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
         switch metadata.shape
         {
         case .landscape:
-            let expectedHeight = metadata.size.proportionalHeight(forWidth: CGFloat(thumbnail.width), precision: .floored)
+            let expectedHeight = metadata.size.proportionalHeight(forWidth: CGFloat(thumbnail.width), precision: .defaultPrecisionScheme)
             let d = Int(round(abs(expectedHeight - CGFloat(thumbnail.height))))
             if (d >= 1)
             {
@@ -291,7 +291,7 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
                 cropRect = nil
             }
         case .portrait:
-            let expectedWidth = metadata.size.proportionalWidth(forHeight: CGFloat(thumbnail.height), precision: .floored)
+            let expectedWidth = metadata.size.proportionalWidth(forHeight: CGFloat(thumbnail.height), precision: .defaultPrecisionScheme)
             let d = Int(round(abs(expectedWidth - CGFloat(thumbnail.width))))
             if (d >= 1)
             {

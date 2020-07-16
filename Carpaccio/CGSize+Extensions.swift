@@ -29,6 +29,10 @@ public enum PrecisionScheme {
             return round(preciseValue)
         }
     }
+
+    public static var defaultPrecisionScheme: PrecisionScheme {
+        return .rounded
+    }
 }
 
 public extension CGFloat {
@@ -46,8 +50,32 @@ public extension CGSize {
         self.init(width: CGFloat.unconstrained, height: height)
     }
 
+    static var unconstrained: CGSize {
+        return CGSize(width: CGFloat.unconstrained, height: CGFloat.unconstrained)
+    }
+
     var isConstrained: Bool {
         return width.isFinite || height.isFinite
+    }
+
+    var hasConstrainedHeight: Bool {
+        return height.isFinite
+    }
+
+    var hasConstrainedWidth: Bool {
+        return width.isFinite
+    }
+
+    var isUnconstrained: Bool {
+        return !width.isFinite && !height.isFinite
+    }
+
+    var hasUnconstrainedHeight: Bool {
+        return !height.isFinite
+    }
+
+    var hasUnconstrainedWidth: Bool {
+        return !width.isFinite
     }
 
     static func * (size: CGSize, scale: CGFloat) -> CGSize {
@@ -56,6 +84,10 @@ public extension CGSize {
 
     static func * (scale: CGFloat, size: CGSize) -> CGSize {
         size * scale
+    }
+
+    static func > (lhs: CGSize, rhs: CGSize) -> Bool {
+        lhs.width * lhs.height > rhs.width * rhs.height
     }
 
     var aspectRatio: CGFloat {

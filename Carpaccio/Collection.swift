@@ -28,7 +28,7 @@ open class Collection: ImageCollection {
         self.URL = URL
         self.images = images
     }
-            
+
     public init(contentsOf url: Foundation.URL) throws {
         self.URL = url
         self.name = url.lastPathComponent
