@@ -1,4 +1,4 @@
-### Carpaccio [![Swift Package Manager compatible](https://img.shields.io/badge/Swift%20Package%20Manager-compatible-brightgreen.svg)](https://github.com/apple/swift-package-manager) [![build status](https://gitlab.com/sashimiapp-public/Carpaccio/badges/master/build.svg)](https://gitlab.com/sashimiapp-public/Carpaccio/commits/master)
+### Carpaccio [![Swift Package Manager compatible](https://img.shields.io/badge/Swift%20Package%20Manager-compatible-brightgreen.svg)](https://github.com/apple/swift-package-manager) [![pipeline status](https://gitlab.com/sashimiapp-public/Carpaccio/badges/master/pipeline.svg)](https://gitlab.com/sashimiapp-public/Carpaccio/-/commits/master)
 ##### Pure Swift goodness for RAW and other image + metadata handling
 
 Carpaccio is a Swift library for macOS and iOS that allows fast decoding of image data & EXIF metadata from file formats supported by CoreImage (including all the various RAW file formats supported, using the CoreImage RAW decoding capability).
