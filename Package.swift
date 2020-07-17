@@ -13,6 +13,7 @@ let package = Package(
             name: "Carpaccio",
             targets: ["Carpaccio"]
         ),
+        .executable(name: "exifdump", targets: ["exifdump"])
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
@@ -25,6 +26,8 @@ let package = Package(
             name: "Carpaccio",
             dependencies: []
         ),
+        .target(name: "exifdump",
+                dependencies: ["Carpaccio"]),
         .testTarget(
             name: "CarpaccioTests",
             dependencies: ["Carpaccio"],

@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import Carpaccio
 
 if CommandLine.arguments.count < 2 {
     fputs("USAGE: carpaccio-dump <list of files to output EXIF metadata of>\n", stderr)
