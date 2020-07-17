@@ -31,21 +31,16 @@ File > Swift Packages > Add Package Dependency...
 
 #### USAGE
 
-Adapting from a test included in the test suite for the framework, here's how you can use Carpaccio:
+For a toy example, see below:
 
-```Swift
-    let converter = RAWImageLoader(imageURL: img1URL, thumbnailScheme: .fullImageWhenThumbnailMissing)
-
-    converter.loadThumbnailImage(handler: { thumb, imageMetadata in
-        // deal with thumbnail + metadata 
-    }) { error in
-        // deal with the error 
-    }
+```swift
+guard let url = Bundle.module.url(forResource: "DP2M1726", withExtension: "X3F") else {
+    return
+}
+let loader = ImageLoader(imageURL: url, thumbnailScheme: .fullImageIfThumbnailMissing, colorSpace: nil)
 ```
 
-There's a lot more to it though, including different schemes for loading thumbnails or using full size images when thumbnails are not found or are too small, and decoding thumbnails / full images at a specified maximum resolution. 
-
-Documentation and tests are minimal so for now you'll just need to explore the API to discover all the good stuff. Please feel free to make suggestions as issues on GitHub.
+See more usage examples from the unit tests under `Tests/CarpaccioTests`.
 
 #### TODO
 
