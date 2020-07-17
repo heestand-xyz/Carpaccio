@@ -7,7 +7,7 @@ stages:
 build_macos:
   stage: build_macos
   script:
-    - xcodebuild -workspace Carpaccio.xcworkspace -scheme Carpaccio-OSX clean build
+    - swift build
   tags:
     - xcode
     - macos
@@ -15,7 +15,7 @@ build_macos:
 build_ios:
   stage: build_ios
   script:
-   - xcodebuild -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone XS,OS=12.1' -workspace Carpaccio.xcworkspace -scheme Carpaccio-iOS clean build | xcpretty
+   - xcodebuild -scheme Carpaccio iphonesimulator -destination 'platform=iOS Simulator,name=iPhone XS,OS=12.1'
   tags:
     - xcode
     - macos

@@ -7,6 +7,12 @@
 //
 
 import CoreGraphics
+import ImageIO
+import Foundation
+
+#if os(iOS)
+import MobileCoreServices
+#endif
 
 public enum CGImageExtensionError: LocalizedError {
     case failedToLoadCGImage

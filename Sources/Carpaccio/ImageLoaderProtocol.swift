@@ -8,6 +8,7 @@
 
 import Foundation
 import QuartzCore
+import CoreImage
 
 public typealias ImageMetadataHandler = (_ metadata: ImageMetadata) -> Void
 

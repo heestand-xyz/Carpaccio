@@ -6,6 +6,8 @@
 //  Copyright © 2016 Matias Piipari & Co. All rights reserved.
 //
 
+
+#if os(iOS)
 import Foundation
 import UIKit
 
@@ -46,7 +48,7 @@ struct BitmapImageUtility {
         // we don't for our purposes actually really need the arbitrary size behaviour.
         
         return UIImage(cgImage: cgImage,
-                       scale: size?.width ?? cgImage.width / CGFloat(cgImage.width),
+                       scale: size?.width ?? CGFloat(cgImage.width) / CGFloat(cgImage.width),
                        orientation: UIImage.Orientation.up)
     }
     
@@ -57,3 +59,5 @@ struct BitmapImageUtility {
         return UIImage(cgImage: cgImage)
     }
 }
+
+#endif

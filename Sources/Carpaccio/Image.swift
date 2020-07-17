@@ -8,6 +8,7 @@
 
 import Foundation
 import QuartzCore
+import CoreImage
 
 open class Image: Equatable, Hashable, CustomStringConvertible {
     

@@ -22,7 +22,7 @@ class CarpaccioTests: XCTestCase {
     }
     
     func testSonyRAWConversion() {
-        let img1URL = Bundle(for: type(of: self)).url(forResource:"DSC00583", withExtension: "ARW")!
+        let img1URL = Bundle.module.url(forResource:"DSC00583", withExtension: "ARW")!
         
         let tempDir = URL(fileURLWithPath:NSTemporaryDirectory() + "/\(UUID().uuidString)")
         
@@ -57,7 +57,7 @@ class CarpaccioTests: XCTestCase {
     
     func testiPhone5Image()
     {
-        let img1URL = Bundle(for: type(of: self)).url(forResource:"iphone5", withExtension: "jpg")!
+        let img1URL = Bundle.module.url(forResource: "iphone5", withExtension: "jpg")!
         
         let tempDir = URL(fileURLWithPath:NSTemporaryDirectory() + "/\(UUID().uuidString)")
         
@@ -95,7 +95,7 @@ class CarpaccioTests: XCTestCase {
     }
     
     func testDistanceMatrixComputation() {
-        let resourcesDir = Bundle(for: type(of: self)).resourceURL!
+        let resourcesDir = Bundle.module.resourceURL!
         let imgColl = try! Collection(contentsOf: resourcesDir)
         
         // just checking that the matrix computation succeeds.
@@ -120,7 +120,7 @@ class CarpaccioTests: XCTestCase {
     
     
     func testDistanceTableComputation() {
-        let resourcesDir = Bundle(for: type(of: self)).resourceURL!
+        let resourcesDir = Bundle.module.resourceURL!
         let imgColl = try! Collection(contentsOf: resourcesDir)
         
         let distances = imgColl.distanceTable { a, b in
@@ -140,8 +140,7 @@ class CarpaccioTests: XCTestCase {
     }
     
     func testFailingMetadataThrowsError() {
-        let bundle = Bundle(for: type(of: self))
-        guard let url = bundle.url(forResource: "Pixls/DP2M1726", withExtension: "X3F") else {
+        guard let url = Bundle.module.url(forResource: "DP2M1726", withExtension: "X3F") else {
             XCTAssert(false)
             return
         }
@@ -153,8 +152,7 @@ class CarpaccioTests: XCTestCase {
     }
     
     func testFailingThumbnailThrowsError() {
-        let bundle = Bundle(for: type(of: self))
-        guard let url = bundle.url(forResource: "Pixls/hdrmerge-bayer-fp16-w-pred-deflate", withExtension: "dng") else {
+        guard let url = Bundle.module.url(forResource: "hdrmerge-bayer-fp16-w-pred-deflate", withExtension: "dng") else {
             XCTAssert(false)
             return
         }

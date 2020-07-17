@@ -4,6 +4,7 @@
 
 ## Build generated
 build/
+.build/
 DerivedData
 
 ## Various settings
@@ -53,3 +54,6 @@ fastlane/report.xml
 fastlane/screenshots
 
 .DS_Store
+
+.swiftpm
+*.xcodeproj
