@@ -11,7 +11,7 @@
 import Foundation
 import UIKit
 
-extension UIImage:BitmapImage {
+public extension UIImage:BitmapImage {
     public var nameString: String? {
         return self.accessibilityIdentifier
     }
