@@ -160,4 +160,44 @@ class CarpaccioTests: XCTestCase {
         let loader = ImageLoader(imageURL: url, thumbnailScheme: .fullImageIfThumbnailMissing, colorSpace: nil)
         XCTAssertThrowsError(try loader.loadThumbnailImage(maximumPixelDimensions: nil, allowCropping: true, cancelled: nil))
     }
+
+    func testDictionaryRepresentation() {
+        guard let url = Bundle.module.url(forResource: "iphone5", withExtension: "jpg") else {
+            XCTAssert(false)
+            return
+        }
+        
+        let loader = ImageLoader(imageURL: url, thumbnailScheme: .fullImageIfThumbnailMissing, colorSpace: nil)
+        let imageMetadata = try! loader.loadImageMetadata()
+        let dictRep = imageMetadata.dictionaryRepresentation
+        XCTAssertEqual(imageMetadata.cameraMaker, dictRep["cameraMaker"] as! String?)
+        XCTAssertEqual(imageMetadata.cameraModel, dictRep["cameraModel"] as! String?)
+
+        let nativeSizeArray = dictRep["nativeSize"]! as! [CGFloat]
+        XCTAssertEqual(imageMetadata.nativeSize.width, nativeSizeArray[0])
+        XCTAssertEqual(imageMetadata.nativeSize.height, nativeSizeArray[1])
+        XCTAssertEqual(imageMetadata.shape.rawValue, dictRep["shape"] as! String)
+        XCTAssertEqual(imageMetadata.focalLength35mmEquivalent, (dictRep["focalLength35mmEquivalent"] as! NSNumber).doubleValue)
+        XCTAssertEqual(imageMetadata.iso, (dictRep["ISO"] as! NSNumber).doubleValue)
+        XCTAssertEqual(imageMetadata.shutterSpeed, (dictRep["shutterSpeed"] as! NSNumber).doubleValue)
+        XCTAssertEqual(imageMetadata.focalLength, (dictRep["focalLength"] as! NSNumber).doubleValue)
+        XCTAssertEqual(imageMetadata.nativeOrientation.rawValue, (dictRep["nativeOrientation"] as! NSNumber).uint32Value)
+        XCTAssertEqual(imageMetadata.fNumber, (dictRep["fNumber"] as! NSNumber).doubleValue)
+        XCTAssertEqual(imageMetadata.timestamp?.timeIntervalSince1970, (dictRep["timestamp"] as! NSNumber).doubleValue)
+
+        let jsonEncoder = JSONEncoder()
+        let jsonImageMetadata = try! jsonEncoder.encode(imageMetadata)
+
+        let decodedImageMetadata = try! JSONDecoder().decode(ImageMetadata.self, from: jsonImageMetadata)
+        XCTAssertEqual(imageMetadata.cameraMaker, decodedImageMetadata.cameraMaker)
+        XCTAssertEqual(imageMetadata.cameraModel, decodedImageMetadata.cameraModel)
+        XCTAssertEqual(imageMetadata.nativeSize, decodedImageMetadata.nativeSize)
+        XCTAssertEqual(imageMetadata.shape, decodedImageMetadata.shape)
+        XCTAssertEqual(imageMetadata.focalLength35mmEquivalent, decodedImageMetadata.focalLength35mmEquivalent)
+        XCTAssertEqual(imageMetadata.iso, decodedImageMetadata.iso)
+        XCTAssertEqual(imageMetadata.shutterSpeed!, decodedImageMetadata.shutterSpeed!, accuracy: 0.0001)
+        XCTAssertEqual(imageMetadata.focalLength, decodedImageMetadata.focalLength)
+        XCTAssertEqual(imageMetadata.nativeOrientation, decodedImageMetadata.nativeOrientation)
+        XCTAssertEqual(imageMetadata.timestamp, decodedImageMetadata.timestamp)
+    }
 }

@@ -24,6 +24,8 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
         case sourceHasNoImages
         case failedToDecodeImage
         case invalidImageSize
+        case nativeSizeMissing
+        case invalidNativeOrientation
         
         public var errorDescription: String? {
             switch self {
@@ -49,6 +51,10 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
                 return "Failed to decode image"
             case .invalidImageSize:
                 return "Operation failed because an invalid or missing dimension was provided for its height of width"
+            case .nativeSizeMissing:
+                return "Native size array representation is missing from JSON representation, or is of unexpected dimensions (expecting 2, for width and height)"
+            case .invalidNativeOrientation:
+                return "Invalid native orientation"
             }
         }
     }

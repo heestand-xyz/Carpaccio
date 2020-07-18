@@ -24,7 +24,7 @@ extension CGImagePropertyOrientation
     }
 }
 
-public struct ImageMetadata
+public struct ImageMetadata: Codable
 {
     // MARK: Required metadata
     
@@ -208,7 +208,7 @@ public struct ImageMetadata
         return nativeSize
     }
     
-    public enum Shape: String {
+    public enum Shape: String, Codable {
         case landscape
         case portrait
         case square
@@ -297,7 +297,133 @@ public struct ImageMetadata
         let oneTenthPrecisionSeconds = round(s * 10.0) / 10.0
         return "\(oneTenthPrecisionSeconds)s"
     }
-    
+
+    enum CodingKeys: String, CodingKey {
+        case cameraMaker
+        case cameraModel
+        case colorSpace
+        case fNumber
+        case focalLength
+        case focalLength35mmEquivalent
+        case ISO
+        case nativeOrientation
+        case nativeSize
+        case shape
+        case shutterSpeed
+        case timestamp
+    }
+
+    public init(from decoder: Decoder) throws {
+        let vals = try decoder.container(keyedBy: CodingKeys.self)
+        if vals.contains(.cameraMaker) {
+            self.cameraMaker = try vals.decode(String.self, forKey: .cameraMaker)
+        } else {
+            self.cameraMaker = nil
+        }
+
+        if vals.contains(.cameraModel) {
+            self.cameraModel = try vals.decode(String.self, forKey: .cameraModel)
+        } else {
+            self.cameraModel = nil
+        }
+
+        if vals.contains(.colorSpace), let colorSpaceName = try vals.decode(String?.self, forKey: .colorSpace) {
+            self.colorSpace = CGColorSpace(name: colorSpaceName as CFString)
+        }
+        else {
+            self.colorSpace = nil
+        }
+
+        if vals.contains(.fNumber) {
+            self.fNumber = try vals.decode(Double?.self, forKey: .fNumber)
+        } else {
+            self.fNumber = nil
+        }
+
+        if vals.contains(.focalLength) {
+            self.focalLength = try vals.decode(Double.self, forKey: .focalLength)
+        }
+        else {
+            self.focalLength = nil
+        }
+
+        if vals.contains(.focalLength35mmEquivalent) {
+            self.focalLength35mmEquivalent = try vals.decode(Double?.self, forKey: .focalLength35mmEquivalent)
+        } else {
+            self.focalLength35mmEquivalent = nil
+        }
+
+        if vals.contains(.ISO) {
+            self.iso = try vals.decode(Double?.self, forKey: .ISO)
+        }
+        else {
+            self.iso = nil
+        }
+
+        if vals.contains(.nativeOrientation) {
+            if let nativeOrientationRawValue = try vals.decode(UInt32?.self, forKey: .nativeOrientation),
+               let nativeOrientation = CGImagePropertyOrientation(rawValue: nativeOrientationRawValue) {
+                self.nativeOrientation = nativeOrientation
+            }
+            else {
+                throw Image.Error.invalidNativeOrientation
+            }
+        } else {
+            self.nativeOrientation = CGImagePropertyOrientation.up
+        }
+
+        if vals.contains(.nativeSize) {
+            if let nativeSizeArray = try vals.decode([Double]?.self, forKey: .nativeSize), nativeSizeArray.count == 2 {
+               self.nativeSize = CGSize(width: nativeSizeArray[0], height: nativeSizeArray[1])
+            }
+            else {
+                throw Image.Error.nativeSizeMissing
+            }
+        } else {
+            throw Image.Error.nativeSizeMissing
+        }
+
+        if vals.contains(.shutterSpeed) {
+            self.shutterSpeed = try vals.decode(Double?.self, forKey: .shutterSpeed)
+        }
+        else {
+            self.shutterSpeed = nil
+        }
+
+        if vals.contains(.timestamp) {
+            if let timestampInterval = try vals.decode(TimeInterval?.self, forKey: .timestamp) {
+                self.timestamp = Date(timeIntervalSince1970: timestampInterval)
+            }
+            else {
+                self.timestamp = nil
+            }
+        } else {
+            self.timestamp = nil
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(cameraMaker, forKey: .cameraMaker)
+        try container.encode(cameraModel, forKey: .cameraModel)
+        if let colorSpaceName = colorSpace?.name {
+            try container.encode(colorSpaceName as String, forKey: .colorSpace)
+        }
+        try container.encode(fNumber, forKey: .fNumber)
+        try container.encode(focalLength, forKey: .focalLength)
+        try container.encode(focalLength35mmEquivalent, forKey: .focalLength35mmEquivalent)
+        try container.encode(iso, forKey: .ISO)
+        try container.encode(nativeOrientation.rawValue, forKey: .nativeOrientation)
+        try container.encode([nativeSize.width, nativeSize.height], forKey: .nativeSize)
+        try container.encode(shape.rawValue, forKey: .shape)
+        if let shutterSpeed = shutterSpeed {
+            try container.encode(shutterSpeed, forKey: .shutterSpeed)
+        }
+        if let timestamp = timestamp {
+            try container.encode(timestamp.timeIntervalSince1970, forKey: .timestamp)
+        }
+    }
+
     public var dictionaryRepresentation: [String: Any] {
         var dict: [String: Any] = [String: Any]()
         
