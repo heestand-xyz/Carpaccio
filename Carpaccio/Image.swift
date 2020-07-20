@@ -9,8 +9,28 @@
 import Foundation
 import QuartzCore
 
+/**
+
+ This enumeration indicates the current stage of loading an image's metadata. The values
+ can be used by a client to determine whether a particular image should be completely
+ omitted, or if an error indication should be communicated to the user.
+
+ */
+public enum ImageMetadataState {
+    /** Metadata has not yet been loaded. */
+    case initialized
+
+    /** Metadata is currently being loaded. */
+    case loading
+
+    /** Loading image metadata has succesfully completed. */
+    case completed
+
+    /** Loading image metadata failed with an error. */
+    case failed
+}
+
 open class Image: Equatable, Hashable, CustomStringConvertible {
-    
     public enum Error: Swift.Error, LocalizedError {
         case noLoader(Image)
         case noFileExtension // FIXME: lift this restriction.
@@ -65,11 +85,13 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
     }
     
     public private(set) var URL: Foundation.URL?
+
     public func updateURL(_ url: Foundation.URL) {
         self.URL = url
     }
     
     private var _directoryPath: String?
+
     public var directoryPath: String? {
         if let url = URL {
             if _directoryPath == nil {
@@ -84,11 +106,10 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
     
     public typealias MetadataHandler = (_ metadata: ImageMetadata) -> Void
     public typealias ErrorHandler = (_ error: Image.Error) -> Void
-    
     public typealias DistanceFunction = (_ a:Image, _ b:Image)-> Double
     
     /// Set the value for this to alter the type of object used by default for image and metadata loading.
-    public static var defaultImageLoaderType: URLBackedImageLoaderProtocol.Type = ImageLoader.self
+    internal static var defaultImageLoaderType: URLBackedImageLoaderProtocol.Type = ImageLoader.self
     
     public init(image: BitmapImage, imageLoader: ImageLoaderProtocol) {
         self.cachedImageLoader = imageLoader
@@ -138,11 +159,9 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
         if let cachedLoader = cachedImageLoader {
             return cachedLoader
         }
-
         guard let url = self.URL else {
             return nil
         }
-        
         cachedImageLoader = Image.defaultImageLoaderType.init(imageURL: url, thumbnailScheme: .decodeFullImageIfEmbeddedThumbnailTooSmall)
         return cachedImageLoader
     }
@@ -156,6 +175,10 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
 
      */
     public private(set) var metadata: ImageMetadata?
+
+    public var metadataState: ImageMetadataState {
+        return imageLoader()?.imageMetadataState ?? .initialized
+    }
     
     public func fetchMetadata() throws -> ImageMetadata {
         guard let loader = imageLoader() else {
@@ -164,6 +187,11 @@ open class Image: Equatable, Hashable, CustomStringConvertible {
         let metadata = try loader.loadImageMetadata()
         self.metadata = metadata
         return metadata
+    }
+
+    public func updateMetadata(_ metadata: ImageMetadata) {
+        self.metadata = metadata
+        self.imageLoader()?.updateCachedMetadata(metadata)
     }
     
     private var fileModificationTimestamp: Date?

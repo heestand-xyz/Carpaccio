@@ -108,27 +108,6 @@ public enum ImageLoadingError: Swift.Error, LocalizedError {
 public typealias ImageLoadingErrorHandler = (_ error: ImageLoadingError) -> Void
 
 /**
- 
- This enumeration indicates the current stage of loading an image's metadata. The values
- can be used by a client to determine whether a particular image should be completely
- omitted, or if an error indication should be communicated to the user.
- 
- */
-public enum ImageLoaderMetadataState {
-    /** Metadata has not yet been loaded. */
-    case initialized
-    
-    /** Metadata is currently being loaded. */
-    case loadingMetadata
-    
-    /** Loading image metadata has succesfully completed. */
-    case completed
-    
-    /** Loading image metadata failed with an error. */
-    case failed
-}
-
-/**
  Closure type for determining if a potentially lengthy thumbnail image loading step should
  not be performed after all, due to the image not being needed anymore.
  */
@@ -136,7 +115,7 @@ public typealias CancellationChecker = () -> Bool
 
 public protocol ImageLoaderProtocol {
     var imageURL: URL { get }
-    var imageMetadataState: ImageLoaderMetadataState { get }
+    var imageMetadataState: ImageMetadataState { get }
 
     /** _If_, in addition to `imageURL`, full image image data happens to have been copied into a disk cache location,
       * a direct URL pointing to that location. */
@@ -147,6 +126,12 @@ public protocol ImageLoaderProtocol {
      copy on later calls.
      */
     func loadImageMetadata() throws -> ImageMetadata
+
+    /**
+     If metadata for this loader's image has previously been loaded & stored in a cache, reuse that cached metadata,
+     and update `imageMetadataState` to `.completed`.
+     */
+    func updateCachedMetadata(_ metadata: ImageMetadata)
     
     /**
      Load a `BitmapImage` representation of this loader's associated image, optionally:

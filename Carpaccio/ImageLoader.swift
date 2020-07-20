@@ -118,8 +118,13 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
         return imageSource
     }
     
-    public private(set) var imageMetadataState: ImageLoaderMetadataState = .initialized
+    public private(set) var imageMetadataState: ImageMetadataState = .initialized
     internal fileprivate(set) var cachedImageMetadata: ImageMetadata?
+
+    public func updateCachedMetadata(_ metadata: ImageMetadata) {
+        self.cachedImageMetadata = metadata
+        self.imageMetadataState = .completed
+    }
 
     private func dumpAllImageMetadata(_ imageSource: CGImageSource)
     {
@@ -164,7 +169,7 @@ public class ImageLoader: ImageLoaderProtocol, URLBackedImageLoaderProtocol {
         
         if imageMetadataState == .initialized {
             do {
-                imageMetadataState = .loadingMetadata
+                imageMetadataState = .loading
                 let imageSource = try self.imageSource()
                 let metadata = try ImageMetadata(imageSource: imageSource)
                 cachedImageMetadata = metadata
