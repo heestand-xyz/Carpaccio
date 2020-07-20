@@ -6,6 +6,7 @@
 //  Copyright © 2016 Matias Piipari & Co. All rights reserved.
 //
 
+#if os(macOS)
 import AppKit
 
 extension NSImage: BitmapImage {
@@ -113,3 +114,5 @@ public struct BitmapImageUtility {
         return newImage
     }
 }
+
+#endif

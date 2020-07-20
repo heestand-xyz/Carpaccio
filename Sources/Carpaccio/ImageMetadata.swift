@@ -78,6 +78,33 @@ public struct ImageMetadata: Codable {
         case iso
         case shutterSpeed = "shutter-speed"
         case timestamp
+
+        var dictionaryRepresentationKey: String {
+            switch self {
+            case .nativeSize:
+                return "nativeSize"
+            case .nativeOrientation:
+                return "nativeOrientation"
+            case .cameraMaker:
+                return "cameraMaker"
+            case .cameraModel:
+                return "cameraModel"
+            case .colorSpaceName:
+                return "colorSpace"
+            case .fNumber:
+                return "fNumber"
+            case .focalLength:
+                return "focalLength"
+            case .focalLength35mmEquivalent:
+                return "focalLength35mmEquivalent"
+            case .iso:
+                return "ISO"
+            case .shutterSpeed:
+                return "shutterSpeed"
+            case .timestamp:
+                return "timestamp"
+            }
+        }
     }
 
     // MARK: Initialisers
@@ -326,52 +353,60 @@ public struct ImageMetadata: Codable {
         return "\(oneTenthPrecisionSeconds)s"
     }
 
+    /// Implement a dictionary representation used by some client code implemented before `ImageMetadata`
+    /// implemented `Codable`. Therefore the keys are different (CodingKeys.x.dictionaryRepresentationKey
+    /// rather than CodingKeys.x.rawValue), plus tow other differences:
+    ///   - Native orientation is stored as the numeric CGImageOrientation value, rather than its string equivalent
+    ///   - `shape` is included, even though it is a derived property
     public var dictionaryRepresentation: [String: Any] {
-        var dict: [String: Any] = [String: Any]()
+        var result: [String: Any] = [String: Any]()
 
         if let cameraMaker = self.cameraMaker {
-            dict["cameraMaker"] = cameraMaker
+          result[CodingKeys.cameraMaker.dictionaryRepresentationKey] = cameraMaker
         }
 
         if let cameraModel = self.cameraModel {
-            dict["cameraModel"] = cameraModel
+            result[CodingKeys.cameraModel.dictionaryRepresentationKey] = cameraModel
         }
 
         if let space = self.colorSpace, let spaceName = space.name {
-            dict["colorSpace"] = spaceName
+            result[CodingKeys.colorSpaceName.dictionaryRepresentationKey] = spaceName
         }
 
         if let fNumber = self.fNumber {
-            dict["fNumber"] = fNumber
+            result[CodingKeys.fNumber.dictionaryRepresentationKey] = fNumber
         }
 
         if let focalLength = self.focalLength {
-            dict["focalLength"] = focalLength
+            result[CodingKeys.focalLength.dictionaryRepresentationKey] = focalLength
         }
 
         if let focalLength35mmEquivalent = self.focalLength35mmEquivalent {
-            dict["focalLength35mmEquivalent"] = focalLength35mmEquivalent
+            result[CodingKeys.focalLength35mmEquivalent.dictionaryRepresentationKey] = focalLength35mmEquivalent
         }
 
         if let iso = self.iso {
-            dict["ISO"] = iso
+            result[CodingKeys.iso.dictionaryRepresentationKey] = iso
         }
 
-        dict["nativeOrientation"] = nativeOrientation.rawValue
+        // Note: we store the numeric CGImageOrientation value here, rather than the string equivalent
+        result[CodingKeys.nativeOrientation.dictionaryRepresentationKey] = nativeOrientation.cgImageOrientation.rawValue
 
-        dict["nativeSize"] = [nativeSize.width, nativeSize.height]
+        result[CodingKeys.nativeSize.dictionaryRepresentationKey] = [nativeSize.width, nativeSize.height]
 
-        dict["shape"] = shape.rawValue
+        // Note: we use a string literal here, because `shape` being a derived property, is not part of
+        // the Codable implementation (and hence has not corresponding CodingKeys case)
+        result["shape"] = shape.rawValue
 
         if let shutterSpeed = self.shutterSpeed {
-            dict["shutterSpeed"] = shutterSpeed
+            result[CodingKeys.shutterSpeed.dictionaryRepresentationKey] = shutterSpeed
         }
 
         if let timestamp = self.timestamp {
-            dict["timestamp"] = timestamp.timeIntervalSince1970
+            result[CodingKeys.timestamp.dictionaryRepresentationKey] = timestamp.timeIntervalSince1970
         }
 
-        return dict
+        return result
     }
 
     private static var formatters: [DateFormatterStylePair: DateFormatter] = [:]

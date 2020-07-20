@@ -22,7 +22,7 @@ class CarpaccioTests: XCTestCase {
     }
     
     func testSonyRAWConversion() {
-        let img1URL = Bundle(for: type(of: self)).url(forResource:"DSC00583", withExtension: "ARW")!
+        let img1URL = Bundle.module.url(forResource:"DSC00583", withExtension: "ARW")!
         
         let tempDir = URL(fileURLWithPath:NSTemporaryDirectory() + "/\(UUID().uuidString)")
         
@@ -56,7 +56,7 @@ class CarpaccioTests: XCTestCase {
     
     func testiPhone5Image()
     {
-        let img1URL = Bundle(for: type(of: self)).url(forResource:"iphone5", withExtension: "jpg")!
+        let img1URL = Bundle.module.url(forResource: "iphone5", withExtension: "jpg")!
         
         let tempDir = URL(fileURLWithPath:NSTemporaryDirectory() + "/\(UUID().uuidString)")
         
@@ -93,7 +93,7 @@ class CarpaccioTests: XCTestCase {
     }
     
     func testDistanceMatrixComputation() {
-        let resourcesDir = Bundle(for: type(of: self)).resourceURL!
+        let resourcesDir = Bundle.module.resourceURL!
         let imgColl = try! Collection(contentsOf: resourcesDir)
         
         // just checking that the matrix computation succeeds.
@@ -118,7 +118,7 @@ class CarpaccioTests: XCTestCase {
     
     
     func testDistanceTableComputation() {
-        let resourcesDir = Bundle(for: type(of: self)).resourceURL!
+        let resourcesDir = Bundle.module.resourceURL!
         let imgColl = try! Collection(contentsOf: resourcesDir)
         
         let distances = imgColl.distanceTable { a, b in
@@ -138,8 +138,7 @@ class CarpaccioTests: XCTestCase {
     }
     
     func testFailingMetadataThrowsError() {
-        let bundle = Bundle(for: type(of: self))
-        guard let url = bundle.url(forResource: "Pixls/DP2M1726", withExtension: "X3F") else {
+        guard let url = Bundle.module.url(forResource: "DP2M1726", withExtension: "X3F") else {
             XCTAssert(false)
             return
         }
@@ -151,13 +150,55 @@ class CarpaccioTests: XCTestCase {
     }
     
     func testFailingThumbnailThrowsError() {
-        let bundle = Bundle(for: type(of: self))
-        guard let url = bundle.url(forResource: "Pixls/hdrmerge-bayer-fp16-w-pred-deflate", withExtension: "dng") else {
+        guard let url = Bundle.module.url(forResource: "hdrmerge-bayer-fp16-w-pred-deflate", withExtension: "dng") else {
             XCTAssert(false)
             return
         }
         
         let loader = ImageLoader(imageURL: url, thumbnailScheme: .decodeFullImageIfEmbeddedThumbnailMissing)
         XCTAssertThrowsError(try loader.loadBitmapImage(maximumPixelDimensions: nil, colorSpace: nil, allowCropping: true, cancelled: nil))
+    }
+
+    func testDictionaryRepresentation() {
+        guard let url = Bundle.module.url(forResource: "iphone5", withExtension: "jpg") else {
+            XCTAssert(false)
+            return
+        }
+        
+        let loader = ImageLoader(imageURL: url, thumbnailScheme: .decodeFullImageIfEmbeddedThumbnailMissing)
+        let imageMetadata = try! loader.loadImageMetadata()
+        let dictRep = imageMetadata.dictionaryRepresentation
+        XCTAssertEqual(imageMetadata.cameraMaker, dictRep[ImageMetadata.CodingKeys.cameraMaker.dictionaryRepresentationKey] as! String?)
+        XCTAssertEqual(imageMetadata.cameraModel, dictRep[ImageMetadata.CodingKeys.cameraModel.dictionaryRepresentationKey] as! String?)
+
+        let nativeSizeArray = dictRep[ImageMetadata.CodingKeys.nativeSize.dictionaryRepresentationKey]! as! [CGFloat]
+        XCTAssertEqual(imageMetadata.nativeSize.width, nativeSizeArray[0])
+        XCTAssertEqual(imageMetadata.nativeSize.height, nativeSizeArray[1])
+        XCTAssertEqual(imageMetadata.shape.rawValue, dictRep["shape"] as! String)
+        XCTAssertEqual(imageMetadata.focalLength35mmEquivalent, (dictRep[ImageMetadata.CodingKeys.focalLength35mmEquivalent.dictionaryRepresentationKey] as! NSNumber).doubleValue)
+        XCTAssertEqual(imageMetadata.iso, (dictRep[ImageMetadata.CodingKeys.iso.dictionaryRepresentationKey] as! NSNumber).doubleValue)
+        XCTAssertEqual(imageMetadata.shutterSpeed, (dictRep[ImageMetadata.CodingKeys.shutterSpeed.dictionaryRepresentationKey] as! NSNumber).doubleValue)
+        XCTAssertEqual(imageMetadata.focalLength, (dictRep[ImageMetadata.CodingKeys.focalLength.dictionaryRepresentationKey] as! NSNumber).doubleValue)
+        XCTAssertEqual(
+            imageMetadata.nativeOrientation.cgImageOrientation,
+            CGImagePropertyOrientation(rawValue: (dictRep[ImageMetadata.CodingKeys.nativeOrientation.dictionaryRepresentationKey] as! NSNumber).uint32Value)
+        )
+        XCTAssertEqual(imageMetadata.fNumber, (dictRep[ImageMetadata.CodingKeys.fNumber.dictionaryRepresentationKey] as! NSNumber).doubleValue)
+        XCTAssertEqual(imageMetadata.timestamp?.timeIntervalSince1970, (dictRep[ImageMetadata.CodingKeys.timestamp.dictionaryRepresentationKey] as! NSNumber).doubleValue)
+
+        let jsonEncoder = JSONEncoder()
+        let jsonImageMetadata = try! jsonEncoder.encode(imageMetadata)
+
+        let decodedImageMetadata = try! JSONDecoder().decode(ImageMetadata.self, from: jsonImageMetadata)
+        XCTAssertEqual(imageMetadata.cameraMaker, decodedImageMetadata.cameraMaker)
+        XCTAssertEqual(imageMetadata.cameraModel, decodedImageMetadata.cameraModel)
+        XCTAssertEqual(imageMetadata.nativeSize, decodedImageMetadata.nativeSize)
+        XCTAssertEqual(imageMetadata.shape, decodedImageMetadata.shape)
+        XCTAssertEqual(imageMetadata.focalLength35mmEquivalent, decodedImageMetadata.focalLength35mmEquivalent)
+        XCTAssertEqual(imageMetadata.iso, decodedImageMetadata.iso)
+        XCTAssertEqual(imageMetadata.shutterSpeed!, decodedImageMetadata.shutterSpeed!, accuracy: 0.0001)
+        XCTAssertEqual(imageMetadata.focalLength, decodedImageMetadata.focalLength)
+        XCTAssertEqual(imageMetadata.nativeOrientation, decodedImageMetadata.nativeOrientation)
+        XCTAssertEqual(imageMetadata.timestamp, decodedImageMetadata.timestamp)
     }
 }
