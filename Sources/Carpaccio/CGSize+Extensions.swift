@@ -191,7 +191,7 @@ public extension CGSize {
      */
     func isSufficientToFulfill(targetSize: CGSize, atMinimumRatio ratio: CGFloat = 1.0) -> Bool {
         let widthIsSufficient: Bool = {
-            let considerWidth = targetSize.width >= 1.0 && targetSize.width != CGFloat.unconstrained
+            let considerWidth = targetSize.width >= 1.0 && targetSize.hasConstrainedWidth
             if considerWidth {
                 return ((1.0 / ratio) * width) >= targetSize.width
             }
@@ -199,12 +199,14 @@ public extension CGSize {
         }()
 
         let heightIsSufficient: Bool = {
-            let considerHeight = targetSize.height >= 1.0 && targetSize.height != CGFloat.unconstrained
+            let considerHeight = targetSize.height >= 1.0 && targetSize.hasConstrainedHeight
             if considerHeight {
                 return ((1.0 / ratio) * height) >= targetSize.height
             }
             return true
         }()
+
+        print("\(self) vs. \(targetSize): width \(widthIsSufficient ? "ok" : "👎🏻"), height \(heightIsSufficient ? "ok" : "👎🏻")")
 
         return widthIsSufficient && heightIsSufficient
     }

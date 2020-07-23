@@ -55,7 +55,7 @@ public extension CGImage {
         switch proposedScheme {
         case .decodeFullImageIfEmbeddedThumbnailTooSmall:
             if let candidate = try? loadCGImage(from: source, metadata: metadata, constrainingToSize: constrainedSize, thumbnailScheme: .decodeEmbeddedThumbnail, colorSpace: colorSpace),
-               !proposedScheme.shouldLoadFullSizeImage(having: candidate, desiredMaximumPixelDimensions: constrainedSize
+               !proposedScheme.shouldDecodeFullImage(having: candidate, desiredMaximumPixelDimensions: constrainedSize
                ) {
                 return candidate
             }
